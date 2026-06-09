@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Festivals</title>
+</head>
+<body>
+<div id="FestivalsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-input,emby-button,emby-select,emby-textarea,emby-collapse">
+    <div data-role="content">
+        <div class="content-primary">
+
+            <div class="verticalSection verticalSection-extrabottompadding">
+                <div class="sectionTitleContainer flex align-items-center">
+                    <h2 class="sectionTitle">Festivals</h2>
+                    <button is="emby-button" type="button" id="btnAddFestival"
+                            class="fab emby-button" style="margin-left:1em;" title="Add festival">
+                        <span class="material-icons add" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <p class="fieldDescription" style="margin-top:0;">
+                    Manage festivals, their editions (years) and the recorded performances.
+                    Match values must equal the folder / file names in your media library.
+                </p>
+            </div>
+
+            <div id="festivalList"></div>
+
+            <div style="margin-top:2em;">
+                <button is="emby-button" type="button" id="btnSave" class="raised button-submit block emby-button">
+                    <span>Save</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+<style>
+    .festCard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:1.2em;margin-bottom:1.2em;}
+    .festCard .cardHead{display:flex;align-items:center;gap:.6em;margin-bottom:.8em;}
+    .festCard .cardHead .grow{flex:1;}
+    .yearCard{background:rgba(255,255,255,.03);border-left:3px solid #00a4dc;border-radius:6px;padding:1em;margin:.8em 0;}
+    .recCard{background:rgba(0,0,0,.18);border-radius:6px;padding:.9em;margin:.6em 0;}
+    .fRow{display:flex;flex-wrap:wrap;gap:1em;}
+    .fRow > div{flex:1;min-width:220px;}
+    .imgField{display:flex;align-items:center;gap:.8em;margin:.4em 0;}
+    .imgField img{height:64px;width:auto;border-radius:4px;background:#111;object-fit:cover;display:none;}
+    .imgField img.has{display:block;}
+    .miniLabel{font-size:.82em;opacity:.7;margin-bottom:.2em;display:block;}
+    .rowBtns{display:flex;gap:.5em;align-items:center;}
+    .subTitle{font-weight:600;opacity:.85;margin:.4em 0;}
+</style>
+
+<script type="text/javascript">
+(function () {
+    var pluginId = 'b9f7e2a4-3c1d-4e6f-8a2b-1d5c7e9f0a3b';
+    var page;
+    var db = { Festivals: [] };
+
+    function uid() {
+        return 'f' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function imageUrl(name) {
+        return name ? ApiClient.getUrl('Festivals/Images/' + name) : '';
+    }
+
+    // ---- rendering ---------------------------------------------------------
+
+    function imageField(label, current, kind, idx) {
+        var url = imageUrl(current);
+        return '' +
+            '<div class="imgField" data-imgkind="' + kind + '" data-imgidx="' + idx + '">' +
+                '<img class="imgPreview' + (current ? ' has' : '') + '" src="' + url + '" alt="">' +
+                '<input type="hidden" class="imgValue" value="' + (current || '') + '">' +
+                '<label class="emby-button raised" style="cursor:pointer;margin:0;">' +
+                    '<span>' + label + '</span>' +
+                    '<input type="file" accept="image/*" class="imgUpload" style="display:none;">' +
+                '</label>' +
+                (current ? '<button is="emby-button" type="button" class="imgClear emby-button"><span class="material-icons close"></span></button>' : '') +
+            '</div>';
+    }
+
+    function recordingCard(rec, fi, yi, ri) {
+        return '' +
+        '<div class="recCard" data-rec="' + ri + '">' +
+            '<div class="fRow">' +
+                '<div><label class="miniLabel">File match (file name without extension)</label>' +
+                    '<input is="emby-input" type="text" class="f-fileMatch" value="' + esc(rec.FileMatch) + '"></div>' +
+                '<div><label class="miniLabel">Artist (episode title)</label>' +
+                    '<input is="emby-input" type="text" class="f-artist" value="' + esc(rec.Artist) + '"></div>' +
+            '</div>' +
+            '<div class="fRow">' +
+                '<div><label class="miniLabel">Stage</label>' +
+                    '<input is="emby-input" type="text" class="f-stage" value="' + esc(rec.Stage) + '"></div>' +
+                '<div><label class="miniLabel">Date / time</label>' +
+                    '<input is="emby-input" type="text" class="f-date" value="' + esc(rec.Date) + '"></div>' +
+                '<div><label class="miniLabel">Genres (comma separated)</label>' +
+                    '<input is="emby-input" type="text" class="f-genres" value="' + esc((rec.Genres || []).join(', ')) + '"></div>' +
+            '</div>' +
+            '<label class="miniLabel">Bio / description</label>' +
+            '<textarea is="emby-textarea" class="f-bio" rows="2">' + esc(rec.Bio) + '</textarea>' +
+            '<label class="miniLabel">Setlist</label>' +
+            '<textarea is="emby-textarea" class="f-setlist" rows="2">' + esc(rec.Setlist) + '</textarea>' +
+            imageField('Artist image', rec.ArtistImage, 'artist', '') +
+            '<div class="rowBtns" style="justify-content:flex-end;">' +
+                '<button is="emby-button" type="button" class="btnDelRec emby-button"><span class="material-icons delete"></span><span>Remove performance</span></button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function yearCard(year, fi, yi) {
+        var recs = (year.Recordings || []).map(function (r, ri) { return recordingCard(r, fi, yi, ri); }).join('');
+        return '' +
+        '<div class="yearCard" data-year="' + yi + '">' +
+            '<div class="fRow">' +
+                '<div><label class="miniLabel">Year</label>' +
+                    '<input is="emby-input" type="number" class="y-year" value="' + esc(year.Year) + '"></div>' +
+                '<div style="flex:2;"><label class="miniLabel">Description</label>' +
+                    '<input is="emby-input" type="text" class="y-desc" value="' + esc(year.Description) + '"></div>' +
+            '</div>' +
+            imageField('Edition poster', year.Poster, 'yearPoster', '') +
+            '<div class="subTitle">Performances</div>' +
+            '<div class="recList">' + recs + '</div>' +
+            '<div class="rowBtns">' +
+                '<button is="emby-button" type="button" class="btnAddRec emby-button raised"><span class="material-icons add"></span><span>Add performance</span></button>' +
+                '<button is="emby-button" type="button" class="btnDelYear emby-button"><span class="material-icons delete"></span><span>Remove year</span></button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function festivalCard(f, fi) {
+        var years = (f.Years || []).map(function (y, yi) { return yearCard(y, fi, yi); }).join('');
+        return '' +
+        '<div class="festCard" data-fest="' + fi + '">' +
+            '<div class="cardHead">' +
+                '<span class="material-icons festival" style="opacity:.6;"></span>' +
+                '<div class="grow"><input is="emby-input" type="text" class="f-name" placeholder="Festival name (= folder name)" value="' + esc(f.Name) + '"></div>' +
+                '<button is="emby-button" type="button" class="btnDelFest emby-button"><span class="material-icons delete"></span></button>' +
+            '</div>' +
+            '<div class="fRow">' +
+                '<div><label class="miniLabel">Location</label>' +
+                    '<input is="emby-input" type="text" class="f-location" value="' + esc(f.Location) + '"></div>' +
+                '<div style="flex:2;"><label class="miniLabel">Genres (comma separated)</label>' +
+                    '<input is="emby-input" type="text" class="f-fgenres" value="' + esc((f.Genres || []).join(', ')) + '"></div>' +
+            '</div>' +
+            '<label class="miniLabel">Description</label>' +
+            '<textarea is="emby-textarea" class="f-desc" rows="2">' + esc(f.Description) + '</textarea>' +
+            '<div class="fRow">' +
+                '<div>' + imageField('Hero / backdrop', f.HeroImage, 'hero', '') + '</div>' +
+                '<div>' + imageField('Poster', f.Poster, 'poster', '') + '</div>' +
+            '</div>' +
+            '<div class="subTitle">Years</div>' +
+            '<div class="yearList">' + years + '</div>' +
+            '<button is="emby-button" type="button" class="btnAddYear emby-button raised"><span class="material-icons add"></span><span>Add year</span></button>' +
+        '</div>';
+    }
+
+    function render() {
+        var html = db.Festivals.map(function (f, fi) { return festivalCard(f, fi); }).join('');
+        page.querySelector('#festivalList').innerHTML = html ||
+            '<p class="fieldDescription">No festivals yet. Use the + button above to add one.</p>';
+    }
+
+    function esc(v) {
+        if (v === null || v === undefined) { return ''; }
+        return String(v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function splitList(v) {
+        return (v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+
+    // ---- DOM -> state ------------------------------------------------------
+
+    function imgValueIn(scope) {
+        var el = scope.querySelector(':scope > .imgField > .imgValue');
+        return el ? el.value || null : null;
+    }
+
+    function syncFromDom() {
+        var fests = [];
+        page.querySelectorAll('#festivalList > .festCard').forEach(function (fc, fi) {
+            var f = db.Festivals[fi] || {};
+            var festival = {
+                Id: f.Id || uid(),
+                Name: val(fc, '.f-name'),
+                Location: val(fc, '.f-location') || null,
+                Description: val(fc, '.f-desc') || null,
+                Genres: splitList(val(fc, '.f-fgenres')),
+                HeroImage: imgValueOf(fc, 'hero'),
+                Poster: imgValueOf(fc, 'poster'),
+                Years: []
+            };
+            fc.querySelectorAll('.yearList > .yearCard').forEach(function (yc) {
+                var year = {
+                    Year: parseInt(val(yc, '.y-year'), 10) || 0,
+                    Description: val(yc, '.y-desc') || null,
+                    Poster: imgValueOf(yc, 'yearPoster'),
+                    Recordings: []
+                };
+                yc.querySelectorAll('.recList > .recCard').forEach(function (rc) {
+                    year.Recordings.push({
+                        FileMatch: val(rc, '.f-fileMatch'),
+                        Artist: val(rc, '.f-artist'),
+                        Stage: val(rc, '.f-stage') || null,
+                        Date: val(rc, '.f-date') || null,
+                        Genres: splitList(val(rc, '.f-genres')),
+                        Bio: val(rc, '.f-bio') || null,
+                        Setlist: val(rc, '.f-setlist') || null,
+                        ArtistImage: imgValueOf(rc, 'artist')
+                    });
+                });
+                festival.Years.push(year);
+            });
+            fests.push(festival);
+        });
+        db.Festivals = fests;
+    }
+
+    function val(scope, sel) {
+        var el = scope.querySelector(sel);
+        return el ? el.value : '';
+    }
+
+    function imgValueOf(scope, kind) {
+        var field = scope.querySelector('.imgField[data-imgkind="' + kind + '"]');
+        if (!field) { return null; }
+        var v = field.querySelector('.imgValue');
+        return v && v.value ? v.value : null;
+    }
+
+    // ---- events ------------------------------------------------------------
+
+    function onClick(e) {
+        var t = e.target.closest('button');
+        if (!t) { return; }
+
+        if (t.id === 'btnAddFestival') {
+            syncFromDom();
+            db.Festivals.push({ Id: uid(), Name: '', Genres: [], Years: [] });
+            render();
+            return;
+        }
+
+        var festCard = t.closest('.festCard');
+        var fi = festCard ? parseInt(festCard.dataset.fest, 10) : -1;
+
+        if (t.classList.contains('btnDelFest')) {
+            syncFromDom(); db.Festivals.splice(fi, 1); render(); return;
+        }
+        if (t.classList.contains('btnAddYear')) {
+            syncFromDom();
+            db.Festivals[fi].Years.push({ Year: new Date().getFullYear(), Recordings: [] });
+            render(); return;
+        }
+
+        var yearCardEl = t.closest('.yearCard');
+        var yi = yearCardEl ? Array.prototype.indexOf.call(festCard.querySelectorAll('.yearList > .yearCard'), yearCardEl) : -1;
+
+        if (t.classList.contains('btnDelYear')) {
+            syncFromDom(); db.Festivals[fi].Years.splice(yi, 1); render(); return;
+        }
+        if (t.classList.contains('btnAddRec')) {
+            syncFromDom();
+            db.Festivals[fi].Years[yi].Recordings.push({ FileMatch: '', Artist: '', Genres: [] });
+            render(); return;
+        }
+        if (t.classList.contains('btnDelRec')) {
+            var recCard = t.closest('.recCard');
+            var ri = Array.prototype.indexOf.call(yearCardEl.querySelectorAll('.recList > .recCard'), recCard);
+            syncFromDom(); db.Festivals[fi].Years[yi].Recordings.splice(ri, 1); render(); return;
+        }
+        if (t.classList.contains('imgClear')) {
+            var field = t.closest('.imgField');
+            field.querySelector('.imgValue').value = '';
+            var img = field.querySelector('.imgPreview');
+            img.src = ''; img.classList.remove('has');
+            t.remove();
+            return;
+        }
+    }
+
+    function onFileChange(e) {
+        var input = e.target;
+        if (!input.classList.contains('imgUpload') || !input.files || !input.files.length) { return; }
+        var field = input.closest('.imgField');
+        var fd = new FormData();
+        fd.append('file', input.files[0]);
+        Dashboard.showLoadingMsg();
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Festivals/Images'),
+            data: fd,
+            dataType: 'json'
+        }).then(function (res) {
+            field.querySelector('.imgValue').value = res.fileName;
+            var img = field.querySelector('.imgPreview');
+            img.src = imageUrl(res.fileName); img.classList.add('has');
+            input.value = '';
+            Dashboard.hideLoadingMsg();
+        }).catch(function () {
+            Dashboard.hideLoadingMsg();
+            Dashboard.alert('Upload failed.');
+        });
+    }
+
+    function load() {
+        Dashboard.showLoadingMsg();
+        ApiClient.getJSON(ApiClient.getUrl('Festivals')).then(function (res) {
+            db = res && res.Festivals ? res : { Festivals: [] };
+            render();
+            Dashboard.hideLoadingMsg();
+        }).catch(function () {
+            db = { Festivals: [] };
+            render();
+            Dashboard.hideLoadingMsg();
+        });
+    }
+
+    function save() {
+        syncFromDom();
+        Dashboard.showLoadingMsg();
+        ApiClient.ajax({
+            type: 'PUT',
+            url: ApiClient.getUrl('Festivals'),
+            data: JSON.stringify(db),
+            contentType: 'application/json'
+        }).then(function () {
+            Dashboard.hideLoadingMsg();
+            Dashboard.alert('Festivals saved. Refresh your library metadata to apply changes.');
+        }).catch(function () {
+            Dashboard.hideLoadingMsg();
+            Dashboard.alert('Save failed.');
+        });
+    }
+
+    document.querySelector('#FestivalsConfigPage').addEventListener('viewshow', function () {
+        page = this;
+        page.addEventListener('click', onClick);
+        page.addEventListener('change', onFileChange);
+        page.querySelector('#btnSave').addEventListener('click', save);
+        load();
+    });
+})();
+</script>
+</div>
+</body>
+</html>

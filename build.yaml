@@ -1,0 +1,18 @@
+---
+name: "Festivals"
+guid: "b9f7e2a4-3c1d-4e6f-8a2b-1d5c7e9f0a3b"
+version: "1.0.0.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
+overview: "Browse music festivals as a native library: festival → years → recorded performances."
+description: >
+  Presents music festivals in Jellyfin. A "Festivals" library shows each festival
+  (e.g. Rock am Ring) with a hero image and info; drilling in reveals the editions
+  by year, and inside each year the recorded performances with artist information.
+  Data is managed through the plugin's dashboard configuration page.
+category: "Metadata"
+owner: "lifad"
+artifacts:
+- "Jellyfin.Plugin.Festivals.dll"
+changelog: >
+  1.0.0.0 - Initial release.
