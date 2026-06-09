@@ -434,12 +434,18 @@
         fd.append('file', input.files[0]);
         Dashboard.showLoadingMsg();
         // Use native fetch so the browser sets the multipart boundary itself;
-        // ApiClient.ajax forces a JSON content-type which breaks IFormFile binding.
-        fetch(ApiClient.getUrl('Festivals/Images', { api_key: ApiClient.accessToken() }), {
+        // ApiClient.ajax url-encodes non-string bodies which breaks IFormFile binding.
+        // Authenticate with the canonical Jellyfin Authorization header.
+        var headers = { 'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"' };
+        fetch(ApiClient.getUrl('Festivals/Images'), {
             method: 'POST',
-            body: fd
+            body: fd,
+            headers: headers,
+            credentials: 'same-origin'
         }).then(function (r) {
-            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+            if (!r.ok) {
+                return r.text().then(function (t) { throw new Error('HTTP ' + r.status + (t ? ' – ' + t : '')); });
+            }
             return r.json();
         }).then(function (res) {
             wrap.querySelector('.imgValue').value = res.fileName;
