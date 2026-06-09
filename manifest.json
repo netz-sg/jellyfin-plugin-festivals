@@ -9,6 +9,14 @@
         "imageUrl": "",
         "versions": [
             {
+                "version": "1.0.3.0",
+                "changelog": "Fix image upload (multipart), robust library-id based discovery, diagnostics when no festivals are found.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/netz-sg/jellyfin-plugin-festivals/releases/download/v1.0.3.0/festivals_1.0.3.0.zip",
+                "checksum": "cfd2aa9fd6816ef172600a0a6e807499",
+                "timestamp": "2026-06-09T20:00:00Z"
+            },
+            {
                 "version": "1.0.2.0",
                 "changelog": "Setup step to pick the festivals folder first, wider settings layout, choose from existing libraries or browse a path.",
                 "targetAbi": "10.11.0.0",

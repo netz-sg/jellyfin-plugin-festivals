@@ -31,44 +31,27 @@ public class FestivalDiscovery
     public IReadOnlyList<LibraryInfo> GetLibraries()
     {
         return _libraryManager.GetVirtualFolders()
-            .SelectMany(v => (v.Locations ?? Array.Empty<string>())
-                .Select(loc => new LibraryInfo { Name = v.Name, Path = loc }))
+            .Select(v => new LibraryInfo
+            {
+                Id = v.ItemId ?? string.Empty,
+                Name = v.Name,
+                Path = (v.Locations ?? Array.Empty<string>()).FirstOrDefault() ?? string.Empty
+            })
             .OrderBy(l => l.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
     /// <summary>
-    /// Builds the festival tree from the library contents under the given root folder.
+    /// Builds the festival tree from the library selected in the settings.
     /// </summary>
-    /// <param name="rootPath">The configured festivals root folder.</param>
+    /// <param name="settings">The plugin settings (library id / path).</param>
     /// <returns>The discovered database (structure only, no enrichment).</returns>
-    public FestivalDatabase Discover(string? rootPath)
+    public FestivalDatabase Discover(FestivalSettings settings)
     {
         var result = new FestivalDatabase();
-        if (string.IsNullOrWhiteSpace(rootPath))
+
+        foreach (var series in ResolveSeries(settings))
         {
-            return result;
-        }
-
-        var scopeLocations = new[] { rootPath };
-
-        var seriesList = _libraryManager.GetItemList(new InternalItemsQuery
-        {
-            IncludeItemTypes = new[] { BaseItemKind.Series }
-        });
-
-        foreach (var item in seriesList)
-        {
-            if (item is not Series series)
-            {
-                continue;
-            }
-
-            if (!IsUnder(series.Path, scopeLocations))
-            {
-                continue;
-            }
-
             var festival = new Festival
             {
                 Id = series.Id.ToString("N"),
@@ -103,10 +86,7 @@ public class FestivalDiscovery
                 });
             }
 
-            festival.Years = festival.Years
-                .OrderByDescending(y => y.Year)
-                .ToList();
-
+            festival.Years = festival.Years.OrderByDescending(y => y.Year).ToList();
             foreach (var edition in festival.Years)
             {
                 edition.Recordings = edition.Recordings
@@ -124,15 +104,71 @@ public class FestivalDiscovery
         return result;
     }
 
-    private static bool IsUnder(string? path, string[] locations)
+    /// <summary>
+    /// Produces diagnostic counts to explain discovery results.
+    /// </summary>
+    /// <param name="settings">The plugin settings.</param>
+    /// <returns>The diagnostics.</returns>
+    public DiagnosticsResult Diagnose(FestivalSettings settings)
+    {
+        var allSeries = AllSeries();
+        var matched = ResolveSeries(settings);
+        return new DiagnosticsResult
+        {
+            SelectedLibraryId = settings.LibraryId,
+            SelectedPath = settings.LibraryPath,
+            TotalSeries = allSeries.Count,
+            MatchedSeries = matched.Count,
+            SampleSeriesPaths = allSeries.Take(8)
+                .Select(s => s.Path ?? "(no path)")
+                .ToList(),
+            Libraries = GetLibraries().ToList()
+        };
+    }
+
+    private List<Series> ResolveSeries(FestivalSettings settings)
+    {
+        // Preferred: use the chosen library's own item hierarchy.
+        if (!string.IsNullOrWhiteSpace(settings.LibraryId)
+            && Guid.TryParse(settings.LibraryId, out var libId)
+            && _libraryManager.GetItemById(libId) is Folder root)
+        {
+            return root.GetRecursiveChildren()
+                .OfType<Series>()
+                .ToList();
+        }
+
+        // Fallback: filter all series by path.
+        if (!string.IsNullOrWhiteSpace(settings.LibraryPath))
+        {
+            return AllSeries()
+                .Where(s => IsUnder(s.Path, settings.LibraryPath!))
+                .ToList();
+        }
+
+        return new List<Series>();
+    }
+
+    private List<Series> AllSeries()
+    {
+        return _libraryManager.GetItemList(new InternalItemsQuery
+        {
+            IncludeItemTypes = new[] { BaseItemKind.Series }
+        }).OfType<Series>().ToList();
+    }
+
+    private static bool IsUnder(string? path, string root)
     {
         if (string.IsNullOrEmpty(path))
         {
             return false;
         }
 
-        var normalized = Path.GetFullPath(path);
-        return locations.Any(loc =>
-            normalized.StartsWith(Path.GetFullPath(loc), StringComparison.OrdinalIgnoreCase));
+        var p = Normalize(path);
+        var r = Normalize(root);
+        return p == r || p.StartsWith(r + "/", StringComparison.Ordinal);
     }
+
+    private static string Normalize(string p)
+        => p.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
 }

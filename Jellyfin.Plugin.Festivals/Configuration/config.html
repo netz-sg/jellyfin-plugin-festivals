@@ -175,6 +175,16 @@
     .fest-empty h3{margin:.6em 0 .3em;font-size:1.3em;}
     .fest-empty p{opacity:.6;max-width:520px;margin:.4em auto;line-height:1.5;}
     .fest-empty code{background:rgba(255,255,255,.1);padding:.1em .45em;border-radius:5px;}
+    .diagBox{max-width:560px;margin:1.6em auto 0;text-align:left;background:rgba(0,0,0,.25);
+        border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:1.2em 1.4em;font-size:.9em;}
+    .diagRow{display:flex;justify-content:space-between;gap:1em;padding:.3em 0;
+        border-bottom:1px solid rgba(255,255,255,.06);align-items:center;}
+    .diagRow b{color:#00a4dc;}
+    .diagRow code{font-size:.85em;opacity:.8;word-break:break-all;}
+    .diagSub{opacity:.55;text-transform:uppercase;letter-spacing:.04em;font-size:.75em;
+        font-weight:600;margin:1em 0 .3em;}
+    .diagBox ul{margin:.2em 0 0;padding-left:1.2em;opacity:.8;}
+    .diagBox li{margin:.15em 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82em;word-break:break-all;}
 
     .fest-savebar{position:fixed;left:0;right:0;bottom:0;z-index:5;
         background:linear-gradient(180deg,rgba(20,22,28,0),rgba(16,18,22,.96) 40%);padding:1.2em 2.5em;pointer-events:none;}
@@ -186,7 +196,7 @@
 
 <script type="text/javascript">
 (function () {
-    var page, db = { Festivals: [] }, currentPath = '';
+    var page, db = { Festivals: [] }, currentPath = '', currentLibId = '';
 
     function imageUrl(name){ return name ? ApiClient.getUrl('Festivals/Images/' + name) : ''; }
     function esc(v){
@@ -209,8 +219,9 @@
             var sel = page.querySelector('#libSelect');
             sel.innerHTML = '<option value="">&mdash; choose a library &mdash;</option>' +
                 (libs || []).map(function (l) {
-                    return '<option value="' + esc(l.Path) + '">' + esc(l.Name) + ' — ' + esc(l.Path) + '</option>';
+                    return '<option value="' + esc(l.Id) + '" data-path="' + esc(l.Path) + '">' + esc(l.Name) + ' — ' + esc(l.Path) + '</option>';
                 }).join('');
+            if (currentLibId) { sel.value = currentLibId; }
             page.querySelector('#pathInput').value = currentPath || '';
             Dashboard.hideLoadingMsg();
         }).catch(function () { Dashboard.hideLoadingMsg(); });
@@ -309,20 +320,43 @@
         '</div>';
     }
 
-    function emptyState() {
+    function emptyState(d) {
+        var diag = '';
+        if (d) {
+            var samples = (d.SampleSeriesPaths || []).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
+            var libs = (d.Libraries || []).map(function (l) {
+                return '<li><strong>' + esc(l.Name) + '</strong> — ' + esc(l.Path) + '</li>';
+            }).join('');
+            diag = '' +
+                '<div class="diagBox">' +
+                    '<div class="diagRow"><span>Series found in total</span><b>' + d.TotalSeries + '</b></div>' +
+                    '<div class="diagRow"><span>Matched by your selection</span><b>' + d.MatchedSeries + '</b></div>' +
+                    (d.SelectedPath ? '<div class="diagRow"><span>Selected path</span><code>' + esc(d.SelectedPath) + '</code></div>' : '') +
+                    (samples ? '<div class="diagSub">Where your series actually are:</div><ul>' + samples + '</ul>' : '') +
+                    (libs ? '<div class="diagSub">Available libraries:</div><ul>' + libs + '</ul>' : '') +
+                '</div>';
+        }
         return '' +
         '<div class="fest-empty">' +
             '<span class="material-icons">festival</span>' +
             '<h3>No festivals found in this folder</h3>' +
-            '<p>Make sure the selected folder uses the layout ' +
-            '<code>Rock am Ring / 2026 / Sabaton.mkv</code> and that Jellyfin has scanned the library.</p>' +
-            '<p>Then click <strong>Rescan</strong>, or pick a different folder with <strong>Change folder</strong>.</p>' +
+            '<p>Either the selection points at the wrong library, or Jellyfin has not scanned it yet ' +
+            '(it must be a <strong>Shows</strong> library using <code>Festival / 2026 / Artist.mkv</code>).</p>' +
+            '<p>Pick the right one with <strong>Change folder</strong>, or <strong>Rescan</strong> after a library scan.</p>' +
+            diag +
         '</div>';
+    }
+
+    function renderEmpty(root) {
+        root.innerHTML = emptyState(null);
+        ApiClient.getJSON(ApiClient.getUrl('Festivals/Diagnostics'))
+            .then(function (d) { root.innerHTML = emptyState(d); })
+            .catch(function () { /* keep basic empty state */ });
     }
 
     function render() {
         var root = page.querySelector('#festRoot');
-        if (!db.Festivals || !db.Festivals.length) { root.innerHTML = emptyState(); return; }
+        if (!db.Festivals || !db.Festivals.length) { renderEmpty(root); return; }
         root.innerHTML = db.Festivals.map(festCard).join('');
         root.querySelectorAll('.festCard').forEach(function (fc) {
             var first = fc.querySelector('.yearCard');
@@ -389,7 +423,9 @@
     function onChange(e) {
         var input = e.target;
         if (input.id === 'libSelect') {
-            if (input.value) { page.querySelector('#pathInput').value = input.value; }
+            currentLibId = input.value || '';
+            var opt = input.options[input.selectedIndex];
+            if (opt && opt.dataset && opt.dataset.path) { page.querySelector('#pathInput').value = opt.dataset.path; }
             return;
         }
         if (!input.classList || !input.classList.contains('imgUpload') || !input.files || !input.files.length) { return; }
@@ -397,8 +433,15 @@
         var fd = new FormData();
         fd.append('file', input.files[0]);
         Dashboard.showLoadingMsg();
-        ApiClient.ajax({ type:'POST', url: ApiClient.getUrl('Festivals/Images'), data: fd, dataType:'json' })
-        .then(function (res) {
+        // Use native fetch so the browser sets the multipart boundary itself;
+        // ApiClient.ajax forces a JSON content-type which breaks IFormFile binding.
+        fetch(ApiClient.getUrl('Festivals/Images', { api_key: ApiClient.accessToken() }), {
+            method: 'POST',
+            body: fd
+        }).then(function (r) {
+            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+            return r.json();
+        }).then(function (res) {
             wrap.querySelector('.imgValue').value = res.fileName;
             var url = imageUrl(res.fileName);
             if (wrap.classList.contains('festHero')) { wrap.style.backgroundImage = "url('" + url + "')"; wrap.classList.remove('empty'); }
@@ -408,7 +451,7 @@
             if (poster) { poster.src = url; poster.classList.add('has'); }
             input.value = '';
             Dashboard.hideLoadingMsg();
-        }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Upload failed.'); });
+        }).catch(function (err) { Dashboard.hideLoadingMsg(); Dashboard.alert('Upload failed: ' + err.message); });
     }
 
     function browseFolder() {
@@ -432,10 +475,10 @@
 
     function continueSetup() {
         var path = page.querySelector('#pathInput').value.trim();
-        if (!path) { Dashboard.alert('Please choose a library or enter a folder path.'); return; }
+        if (!path && !currentLibId) { Dashboard.alert('Please choose a library or enter a folder path.'); return; }
         Dashboard.showLoadingMsg();
         ApiClient.ajax({ type:'POST', url: ApiClient.getUrl('Festivals/Config'),
-            data: JSON.stringify({ LibraryPath: path }), contentType:'application/json' })
+            data: JSON.stringify({ LibraryId: currentLibId, LibraryPath: path }), contentType:'application/json' })
         .then(function () { currentPath = path; Dashboard.hideLoadingMsg(); showMain(); })
         .catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Could not save the folder.'); });
     }
@@ -467,8 +510,9 @@
         Dashboard.showLoadingMsg();
         ApiClient.getJSON(ApiClient.getUrl('Festivals/Config')).then(function (cfg) {
             currentPath = (cfg && cfg.LibraryPath) ? cfg.LibraryPath : '';
+            currentLibId = (cfg && cfg.LibraryId) ? cfg.LibraryId : '';
             Dashboard.hideLoadingMsg();
-            if (currentPath) { showMain(); } else { showSetup(); }
+            if (currentLibId || currentPath) { showMain(); } else { showSetup(); }
         }).catch(function () { Dashboard.hideLoadingMsg(); showSetup(); });
     }
 
@@ -481,6 +525,9 @@
         page.querySelector('#btnChangeFolder').addEventListener('click', showSetup);
         page.querySelector('#btnBrowse').addEventListener('click', browseFolder);
         page.querySelector('#btnContinue').addEventListener('click', continueSetup);
+        page.querySelector('#pathInput').addEventListener('input', function () {
+            currentLibId = ''; page.querySelector('#libSelect').value = '';
+        });
         init();
     });
 })();

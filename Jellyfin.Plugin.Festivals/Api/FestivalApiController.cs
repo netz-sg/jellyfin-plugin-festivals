@@ -73,11 +73,17 @@ public class FestivalApiController : ControllerBase
     [HttpGet("Tree")]
     public ActionResult<FestivalDatabase> GetTree()
     {
-        var rootPath = _store.GetSettings().LibraryPath;
-        var discovered = _discovery.Discover(rootPath);
+        var discovered = _discovery.Discover(_store.GetSettings());
         Merge(discovered, _store.GetAll());
         return discovered;
     }
+
+    /// <summary>
+    /// Returns diagnostic counts explaining why discovery found (or didn't find) festivals.
+    /// </summary>
+    /// <returns>The diagnostics.</returns>
+    [HttpGet("Diagnostics")]
+    public ActionResult<DiagnosticsResult> GetDiagnostics() => _discovery.Diagnose(_store.GetSettings());
 
     private static void Merge(FestivalDatabase discovered, FestivalDatabase saved)
     {
@@ -149,8 +155,12 @@ public class FestivalApiController : ControllerBase
     /// <param name="file">The uploaded file.</param>
     /// <returns>The stored file name.</returns>
     [HttpPost("Images")]
-    public async Task<ActionResult> UploadImage(IFormFile file)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult> UploadImage([FromForm] IFormFile? file)
     {
+        // Fall back to the raw form files in case model binding by name fails.
+        file ??= Request.HasFormContentType && Request.Form.Files.Count > 0 ? Request.Form.Files[0] : null;
+
         if (file is null || file.Length == 0)
         {
             return BadRequest("No file uploaded.");
