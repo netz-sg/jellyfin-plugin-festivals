@@ -28,21 +28,28 @@ is stored in a plugin‑owned JSON file plus an image folder; no external API is
 ## Media folder layout
 
 Organize the recordings on disk like a TV show, using the festival name as the top
-folder, the year as the season folder, and one file per performance:
+folder, a **`Season <year>`** folder for each edition, and one file per performance:
 
 ```
 Festivals/
   Rock am Ring/
-    2026/
+    Season 2026/
       Sabaton.mkv
       Bring Me The Horizon.mkv
-    2025/
+    Season 2025/
       Metallica.mkv
 ```
 
-- **Festival** = top folder name → matched against the festival *Name* in the config page
-- **Year** = numeric season folder → matched against the *Year*
-- **Recording** = file name (without extension) → matched against the *File match* value
+- **Festival** = top folder name → shown as the Series
+- **Year** = `Season <year>` folder → shown as the Season (the plugin displays just `2026`)
+- **Recording** = file name (without extension) → shown as the Episode
+
+> **Important — name the year folders `Season 2026`, not just `2026`.**
+> Jellyfin's episode scanner splits a bare four‑digit folder like `2026` into
+> "Season 20, Episode 26" and creates a **duplicate/phantom season**. Prefixing with
+> `Season ` makes Jellyfin recognise a single clean season. The plugin still shows the
+> year as `2026`. If you already imported bare‑year folders, rename them and run a full
+> library scan (or remove and re‑add the library) to clear the phantom seasons.
 
 Matching is case‑insensitive and ignores punctuation and extra whitespace.
 

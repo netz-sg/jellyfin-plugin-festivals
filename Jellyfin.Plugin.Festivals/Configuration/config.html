@@ -35,7 +35,10 @@
                     <h2>Where are your festival recordings?</h2>
                     <p>Choose the library or folder that contains your festivals. The plugin reads the
                        festivals, their years and the performances from there &mdash; using the layout
-                       <code>&lt;Folder&gt; / Rock am Ring / 2026 / Sabaton.mkv</code>.</p>
+                       <code>&lt;Folder&gt; / Rock am Ring / Season 2026 / Sabaton.mkv</code>.</p>
+                    <p style="font-size:.85em;opacity:.55;margin-top:-1em;">Important: name the year folders
+                       <code>Season 2026</code> (not just <code>2026</code>) &mdash; Jellyfin otherwise splits
+                       a bare <code>2026</code> into &ldquo;Season 20, Episode 26&rdquo; and creates a duplicate season.</p>
 
                     <label class="setup-label">Library</label>
                     <select is="emby-select" id="libSelect" class="setup-select">
@@ -341,7 +344,7 @@
             '<span class="material-icons">festival</span>' +
             '<h3>No festivals found in this folder</h3>' +
             '<p>Either the selection points at the wrong library, or Jellyfin has not scanned it yet ' +
-            '(it must be a <strong>Shows</strong> library using <code>Festival / 2026 / Artist.mkv</code>).</p>' +
+            '(it must be a <strong>Shows</strong> library using <code>Festival / Season 2026 / Artist.mkv</code>).</p>' +
             '<p>Pick the right one with <strong>Change folder</strong>, or <strong>Rescan</strong> after a library scan.</p>' +
             diag +
         '</div>';
