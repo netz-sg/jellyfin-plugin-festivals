@@ -13,6 +13,7 @@ public class FestivalStore
     private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly object _lock = new();
     private readonly string _jsonPath;
+    private readonly string _settingsPath;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FestivalStore"/> class.
@@ -23,6 +24,7 @@ public class FestivalStore
         DataDir = dataDir;
         Directory.CreateDirectory(dataDir);
         _jsonPath = Path.Combine(dataDir, "festivals.json");
+        _settingsPath = Path.Combine(dataDir, "settings.json");
         ImageDir = Path.Combine(dataDir, "images");
         Directory.CreateDirectory(ImageDir);
     }
@@ -61,6 +63,37 @@ public class FestivalStore
         {
             var json = JsonSerializer.Serialize(db, _jsonOptions);
             File.WriteAllText(_jsonPath, json);
+        }
+    }
+
+    /// <summary>
+    /// Gets the plugin settings.
+    /// </summary>
+    /// <returns>The settings.</returns>
+    public FestivalSettings GetSettings()
+    {
+        lock (_lock)
+        {
+            if (!File.Exists(_settingsPath))
+            {
+                return new FestivalSettings();
+            }
+
+            var json = File.ReadAllText(_settingsPath);
+            return JsonSerializer.Deserialize<FestivalSettings>(json, _jsonOptions) ?? new FestivalSettings();
+        }
+    }
+
+    /// <summary>
+    /// Saves the plugin settings.
+    /// </summary>
+    /// <param name="settings">The settings.</param>
+    public void SaveSettings(FestivalSettings settings)
+    {
+        lock (_lock)
+        {
+            var json = JsonSerializer.Serialize(settings, _jsonOptions);
+            File.WriteAllText(_settingsPath, json);
         }
     }
 

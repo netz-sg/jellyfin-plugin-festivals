@@ -48,22 +48,42 @@ Matching is case‑insensitive and ignores punctuation and extra whitespace.
 
 ## Installation
 
-1. Build the plugin (see below) or download `Jellyfin.Plugin.Festivals.dll`.
+### Option A — Plugin repository (recommended, auto-updates)
+
+1. In Jellyfin open **Dashboard → Plugins → Repositories**.
+2. Click **`+`** and add this repository URL:
+
+   ```
+   https://raw.githubusercontent.com/netz-sg/jellyfin-plugin-festivals/main/manifest.json
+   ```
+
+3. Go to the **Catalog** tab → category **Metadata** → **Festivals** → **Install**.
+4. **Restart Jellyfin.**
+
+The plugin then receives updates automatically through the catalog.
+
+### Option B — Manual
+
+1. Build the plugin (see below) or download `Jellyfin.Plugin.Festivals.dll` from the
+   [latest release](https://github.com/netz-sg/jellyfin-plugin-festivals/releases).
 2. Copy the DLL into your Jellyfin `plugins/Festivals/` directory:
    - Linux: `/var/lib/jellyfin/plugins/Festivals/`
    - Windows: `%ProgramData%\Jellyfin\Server\plugins\Festivals\`
 3. Restart Jellyfin.
-4. Create a library of type **Shows** named *Festivals* pointing at your festivals folder.
 
 ## Usage
 
-1. Open **Dashboard → Plugins → Festivals**.
-2. Add a festival, fill in its name (matching the folder), location, description,
-   genres, and upload a hero/backdrop and poster image.
-3. Add one or more **years**, then add **performances** to each year — set the
-   *File match*, artist, stage, date, genres, bio, setlist and an artist image.
-4. Click **Save**.
-5. In your Festivals library, run **Refresh metadata** so the providers apply the data.
+1. Make sure your recordings are in a **Shows** library that Jellyfin has scanned,
+   using the folder layout shown above.
+2. Open **Festivals** from the main sidebar menu.
+3. On first open, **choose the folder** that contains your festivals (pick a library
+   from the list or enter/browse a path) and click **Continue**.
+4. Your festivals, years and performances are now listed automatically. Fill in
+   hero/poster images, descriptions, artist bios, stages, dates and setlists.
+5. Click **Save changes**.
+6. In your library, run **Refresh metadata** so the providers apply the data.
+
+You can switch the source folder any time via **Change folder** in the top bar.
 
 ## Build from source
 

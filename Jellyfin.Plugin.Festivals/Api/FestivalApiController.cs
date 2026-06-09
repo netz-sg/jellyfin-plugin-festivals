@@ -40,14 +40,41 @@ public class FestivalApiController : ControllerBase
     public ActionResult<FestivalDatabase> GetDatabase() => _store.GetAll();
 
     /// <summary>
-    /// Gets the festival tree discovered from the library, overlaid with saved enrichment.
+    /// Gets the available library locations to choose from in the setup step.
+    /// </summary>
+    /// <returns>The library locations.</returns>
+    [HttpGet("Libraries")]
+    public ActionResult<IReadOnlyList<LibraryInfo>> GetLibraries() => Ok(_discovery.GetLibraries());
+
+    /// <summary>
+    /// Gets the plugin settings (selected festivals folder).
+    /// </summary>
+    /// <returns>The settings.</returns>
+    [HttpGet("Config")]
+    public ActionResult<FestivalSettings> GetConfig() => _store.GetSettings();
+
+    /// <summary>
+    /// Saves the plugin settings (selected festivals folder).
+    /// </summary>
+    /// <param name="settings">The settings.</param>
+    /// <returns>No content.</returns>
+    [HttpPost("Config")]
+    public ActionResult SaveConfig([FromBody] FestivalSettings settings)
+    {
+        _store.SaveSettings(settings);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Gets the festival tree discovered from the configured folder, overlaid with saved enrichment.
     /// This is what the configuration page renders, so nothing has to be typed by hand.
     /// </summary>
     /// <returns>The merged tree.</returns>
     [HttpGet("Tree")]
     public ActionResult<FestivalDatabase> GetTree()
     {
-        var discovered = _discovery.Discover();
+        var rootPath = _store.GetSettings().LibraryPath;
+        var discovered = _discovery.Discover(rootPath);
         Merge(discovered, _store.GetAll());
         return discovered;
     }

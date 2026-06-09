@@ -16,8 +16,6 @@ namespace Jellyfin.Plugin.Festivals.Data;
 /// </summary>
 public class FestivalDiscovery
 {
-    private const string FestivalLibraryName = "Festivals";
-
     private readonly ILibraryManager _libraryManager;
 
     /// <summary>
@@ -27,13 +25,32 @@ public class FestivalDiscovery
     public FestivalDiscovery(ILibraryManager libraryManager) => _libraryManager = libraryManager;
 
     /// <summary>
-    /// Builds the festival tree from the current library contents.
+    /// Lists the available library locations the user can choose as their festivals folder.
     /// </summary>
+    /// <returns>The library locations.</returns>
+    public IReadOnlyList<LibraryInfo> GetLibraries()
+    {
+        return _libraryManager.GetVirtualFolders()
+            .SelectMany(v => (v.Locations ?? Array.Empty<string>())
+                .Select(loc => new LibraryInfo { Name = v.Name, Path = loc }))
+            .OrderBy(l => l.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds the festival tree from the library contents under the given root folder.
+    /// </summary>
+    /// <param name="rootPath">The configured festivals root folder.</param>
     /// <returns>The discovered database (structure only, no enrichment).</returns>
-    public FestivalDatabase Discover()
+    public FestivalDatabase Discover(string? rootPath)
     {
         var result = new FestivalDatabase();
-        var scopeLocations = GetFestivalLibraryLocations();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            return result;
+        }
+
+        var scopeLocations = new[] { rootPath };
 
         var seriesList = _libraryManager.GetItemList(new InternalItemsQuery
         {
@@ -47,7 +64,7 @@ public class FestivalDiscovery
                 continue;
             }
 
-            if (scopeLocations is not null && !IsUnder(series.Path, scopeLocations))
+            if (!IsUnder(series.Path, scopeLocations))
             {
                 continue;
             }
@@ -105,13 +122,6 @@ public class FestivalDiscovery
             .ToList();
 
         return result;
-    }
-
-    private string[]? GetFestivalLibraryLocations()
-    {
-        var folder = _libraryManager.GetVirtualFolders()
-            .FirstOrDefault(v => string.Equals(v.Name, FestivalLibraryName, StringComparison.OrdinalIgnoreCase));
-        return folder?.Locations;
     }
 
     private static bool IsUnder(string? path, string[] locations)

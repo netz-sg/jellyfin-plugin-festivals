@@ -15,20 +15,54 @@
                     <span class="material-icons fest-topbar-icon" aria-hidden="true">festival</span>
                     <div>
                         <h1 class="fest-h1">Festivals</h1>
-                        <div class="fest-sub">Enrich your auto-discovered festivals with artwork &amp; info</div>
+                        <div class="fest-sub" id="festSub">Enrich your festivals with artwork &amp; info</div>
                     </div>
                 </div>
-                <button is="emby-button" type="button" id="btnRescan" class="fest-btn-ghost emby-button">
-                    <span class="material-icons" aria-hidden="true">sync</span><span>Rescan library</span>
-                </button>
+                <div class="fest-topbar-actions" id="festTopActions" style="display:none;">
+                    <button is="emby-button" type="button" id="btnChangeFolder" class="fest-btn-ghost emby-button">
+                        <span class="material-icons" aria-hidden="true">folder</span><span id="folderLabel">Change folder</span>
+                    </button>
+                    <button is="emby-button" type="button" id="btnRescan" class="fest-btn-ghost emby-button">
+                        <span class="material-icons" aria-hidden="true">sync</span><span>Rescan</span>
+                    </button>
+                </div>
             </div>
 
+            <!-- SETUP STEP -->
+            <div id="festSetup" style="display:none;">
+                <div class="fest-setup">
+                    <span class="material-icons setup-icon">folder_open</span>
+                    <h2>Where are your festival recordings?</h2>
+                    <p>Choose the library or folder that contains your festivals. The plugin reads the
+                       festivals, their years and the performances from there &mdash; using the layout
+                       <code>&lt;Folder&gt; / Rock am Ring / 2026 / Sabaton.mkv</code>.</p>
+
+                    <label class="setup-label">Library</label>
+                    <select is="emby-select" id="libSelect" class="setup-select">
+                        <option value="">&mdash; choose a library &mdash;</option>
+                    </select>
+
+                    <label class="setup-label">Folder path</label>
+                    <div class="setup-pathrow">
+                        <input is="emby-input" type="text" id="pathInput" placeholder="/media/festivals">
+                        <button is="emby-button" type="button" id="btnBrowse" class="fest-btn-ghost emby-button">
+                            <span class="material-icons">search</span><span>Browse</span>
+                        </button>
+                    </div>
+
+                    <button is="emby-button" type="button" id="btnContinue" class="fest-btn-primary emby-button setup-continue">
+                        <span>Continue</span><span class="material-icons">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MAIN EDITOR -->
             <div id="festRoot"></div>
 
         </div>
     </div>
 
-    <div class="fest-savebar">
+    <div class="fest-savebar" id="festSavebar" style="display:none;">
         <div class="fest-savebar-inner">
             <span id="festSaveHint" class="fest-savehint"></span>
             <button is="emby-button" type="button" id="btnSave" class="fest-btn-primary emby-button">
@@ -38,13 +72,13 @@
     </div>
 
 <style>
-    #FestivalsConfigPage .content-primary { padding-bottom: 6em; max-width: 1100px; }
+    #FestivalsConfigPage .content-primary { padding: 1.5em 2.5em 7em; max-width: 1680px; margin: 0 auto; }
 
     .fest-topbar{display:flex;align-items:center;justify-content:space-between;gap:1em;
         flex-wrap:wrap;margin:.5em 0 1.6em;}
     .fest-topbar-title{display:flex;align-items:center;gap:.9em;}
-    .fest-topbar-icon{font-size:2.6em;color:#00a4dc;
-        filter:drop-shadow(0 2px 8px rgba(0,164,220,.35));}
+    .fest-topbar-actions{display:flex;gap:.6em;flex-wrap:wrap;}
+    .fest-topbar-icon{font-size:2.6em;color:#00a4dc;filter:drop-shadow(0 2px 8px rgba(0,164,220,.35));}
     .fest-h1{margin:0;font-size:1.9em;font-weight:700;letter-spacing:-.02em;}
     .fest-sub{opacity:.6;font-size:.95em;margin-top:.15em;}
 
@@ -55,83 +89,96 @@
         border:0!important;border-radius:10px!important;padding:.7em 1.4em!important;font-weight:600;
         display:inline-flex;align-items:center;gap:.5em;box-shadow:0 6px 18px rgba(0,164,220,.35);}
 
-    .festCard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);
-        border-radius:16px;margin-bottom:1.6em;overflow:hidden;
-        box-shadow:0 8px 30px rgba(0,0,0,.25);}
+    /* setup */
+    .fest-setup{max-width:620px;margin:3em auto;background:rgba(255,255,255,.035);
+        border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:2.4em;
+        box-shadow:0 12px 40px rgba(0,0,0,.3);text-align:center;}
+    .setup-icon{font-size:3.4em;color:#00a4dc;opacity:.85;}
+    .fest-setup h2{margin:.4em 0 .3em;font-size:1.5em;font-weight:700;}
+    .fest-setup p{opacity:.6;line-height:1.55;margin:0 auto 1.8em;max-width:480px;}
+    .fest-setup code{background:rgba(255,255,255,.1);padding:.1em .45em;border-radius:5px;font-size:.85em;}
+    .setup-label{display:block;text-align:left;font-size:.78em;text-transform:uppercase;
+        letter-spacing:.04em;opacity:.55;font-weight:600;margin:1.1em 0 .4em;}
+    .setup-select,#pathInput{width:100%;box-sizing:border-box;background:rgba(0,0,0,.3)!important;
+        border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;
+        padding:.7em .9em!important;color:inherit;}
+    .setup-pathrow{display:flex;gap:.6em;}
+    .setup-pathrow #pathInput{flex:1;}
+    .setup-continue{width:100%;justify-content:center;margin-top:1.8em;padding:.85em!important;}
 
-    .festHero{position:relative;height:190px;background:#14161c;
-        background-size:cover;background-position:center;display:flex;align-items:flex-end;}
+    .festCard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);
+        border-radius:16px;margin-bottom:1.6em;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.25);}
+    .festHero{position:relative;height:200px;background:#14161c;background-size:cover;
+        background-position:center;display:flex;align-items:flex-end;}
     .festHero::after{content:"";position:absolute;inset:0;
         background:linear-gradient(180deg,rgba(10,12,16,.1) 0%,rgba(10,12,16,.88) 100%);}
     .festHero.empty{background:radial-gradient(120% 140% at 20% 0%,#1d2230,#0d0f14);}
-    .festHeroContent{position:relative;z-index:1;padding:1.3em 1.5em;width:100%;
-        display:flex;align-items:flex-end;justify-content:space-between;gap:1em;}
-    .festTitle{font-size:1.6em;font-weight:700;letter-spacing:-.01em;
-        text-shadow:0 2px 12px rgba(0,0,0,.6);}
-    .festFileBadge{font-size:.72em;opacity:.55;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:.2em;}
-    .festHeroBtns{display:flex;gap:.5em;}
-    .heroBtn{background:rgba(0,0,0,.45)!important;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18)!important;
-        border-radius:9px!important;color:#fff!important;padding:.45em .7em!important;
-        display:inline-flex;align-items:center;gap:.35em;cursor:pointer;font-size:.85em;}
+    .festHeroContent{position:relative;z-index:1;padding:1.3em 1.6em;width:100%;
+        display:flex;align-items:flex-end;justify-content:space-between;gap:1em;box-sizing:border-box;}
+    .festTitle{font-size:1.7em;font-weight:700;letter-spacing:-.01em;text-shadow:0 2px 12px rgba(0,0,0,.6);}
+    .festFileBadge{font-size:.78em;opacity:.6;margin-top:.2em;}
+    .heroBtn{background:rgba(0,0,0,.45)!important;backdrop-filter:blur(6px);
+        border:1px solid rgba(255,255,255,.18)!important;border-radius:9px!important;color:#fff!important;
+        padding:.45em .7em!important;display:inline-flex;align-items:center;gap:.35em;cursor:pointer;font-size:.85em;}
     .heroBtn:hover{background:rgba(0,0,0,.65)!important;}
 
-    .festBody{padding:1.3em 1.5em;}
-    .fest-grid{display:grid;grid-template-columns:1fr 1fr;gap:1em;}
+    .festBody{padding:1.4em 1.6em;}
+    .fest-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2em;}
     @media(max-width:680px){.fest-grid{grid-template-columns:1fr;}}
-    .fld{display:flex;flex-direction:column;gap:.3em;margin-bottom:.9em;}
+    .fld{display:flex;flex-direction:column;gap:.3em;margin-bottom:1em;}
     .fld label{font-size:.78em;text-transform:uppercase;letter-spacing:.04em;opacity:.55;font-weight:600;}
     .fld input,.fld textarea{background:rgba(0,0,0,.25)!important;border:1px solid rgba(255,255,255,.1)!important;
         border-radius:9px!important;padding:.6em .8em!important;color:inherit;width:100%;box-sizing:border-box;}
     .fld textarea{resize:vertical;min-height:3em;font-family:inherit;}
 
     .yearHead{display:flex;align-items:center;gap:.6em;cursor:pointer;
-        padding:.7em .2em;border-top:1px solid rgba(255,255,255,.07);user-select:none;}
+        padding:.8em .2em;border-top:1px solid rgba(255,255,255,.07);user-select:none;}
     .yearHead:hover .yearTitle{color:#00a4dc;}
     .yearChevron{transition:transform .2s;opacity:.6;}
     .yearCard.open .yearChevron{transform:rotate(90deg);}
-    .yearTitle{font-size:1.15em;font-weight:700;}
-    .yearCount{font-size:.8em;opacity:.5;background:rgba(255,255,255,.07);
-        padding:.15em .6em;border-radius:20px;}
+    .yearTitle{font-size:1.2em;font-weight:700;}
+    .yearCount{font-size:.8em;opacity:.5;background:rgba(255,255,255,.07);padding:.15em .6em;border-radius:20px;}
     .yearGrow{flex:1;}
     .yearBody{display:none;padding:.4em 0 1em;}
     .yearCard.open .yearBody{display:block;}
 
-    .recGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1em;margin-top:.6em;}
+    .recGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:1.1em;margin-top:.7em;}
     .recCard{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);
-        border-radius:12px;padding:1em;display:flex;gap:.9em;}
-    .recThumbWrap{position:relative;flex:0 0 84px;}
-    .recThumb{width:84px;height:84px;border-radius:10px;object-fit:cover;
+        border-radius:12px;padding:1.1em;display:flex;gap:1em;}
+    .recThumbWrap{position:relative;flex:0 0 88px;}
+    .recThumb{width:88px;height:88px;border-radius:10px;object-fit:cover;
         background:#0d0f14 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="%23333"><path d="M12 14a3 3 0 100-6 3 3 0 000 6zm0-9a4 4 0 110 8 4 4 0 010-8z"/></svg>') center/40% no-repeat;}
-    .recThumbBtn{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;
-        background:#00a4dc;border:2px solid #14161c;display:flex;align-items:center;justify-content:center;
-        cursor:pointer;color:#fff;}
-    .recThumbBtn .material-icons{font-size:15px;}
+    .recThumbBtn{position:absolute;bottom:-6px;right:-6px;width:30px;height:30px;border-radius:50%;
+        background:#00a4dc;border:2px solid #14161c;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;}
+    .recThumbBtn .material-icons{font-size:16px;}
     .recMain{flex:1;min-width:0;}
-    .recArtist input{background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.12)!important;
-        border-radius:0!important;padding:.1em 0!important;font-size:1.05em;font-weight:600;width:100%;}
+    .recArtist input{background:transparent!important;border:0!important;
+        border-bottom:1px solid rgba(255,255,255,.12)!important;border-radius:0!important;
+        padding:.1em 0!important;font-size:1.1em;font-weight:600;width:100%;}
     .recMeta{display:flex;gap:.5em;margin:.5em 0;flex-wrap:wrap;}
-    .recMeta input{flex:1;min-width:90px;font-size:.85em;background:rgba(0,0,0,.25)!important;
-        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;padding:.4em .55em!important;
-        color:inherit;box-sizing:border-box;}
+    .recMeta input,.rec-inp{flex:1;min-width:90px;font-size:.85em;background:rgba(0,0,0,.25)!important;
+        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;
+        padding:.45em .6em!important;color:inherit;box-sizing:border-box;}
     .recCard textarea{width:100%;box-sizing:border-box;background:rgba(0,0,0,.25)!important;
-        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;padding:.45em .6em!important;
-        color:inherit;font-size:.85em;resize:vertical;min-height:2.4em;font-family:inherit;margin-top:.3em;}
-    .fileTag{font-size:.7em;opacity:.4;font-family:ui-monospace,Menlo,Consolas,monospace;}
+        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;
+        padding:.5em .6em!important;color:inherit;font-size:.85em;resize:vertical;
+        min-height:2.4em;font-family:inherit;margin-top:.35em;}
+    .fileTag{font-size:.72em;opacity:.4;font-family:ui-monospace,Menlo,Consolas,monospace;
+        margin:.2em 0;word-break:break-all;}
 
-    .posterChip{display:flex;align-items:center;gap:.6em;margin-bottom:.9em;}
-    .posterImg{width:46px;height:68px;border-radius:6px;object-fit:cover;background:#0d0f14;display:none;}
+    .posterChip{display:flex;align-items:center;gap:.6em;margin-bottom:1em;}
+    .posterImg{width:48px;height:70px;border-radius:6px;object-fit:cover;background:#0d0f14;display:none;}
     .posterImg.has{display:block;}
 
-    .fest-empty{text-align:center;padding:4em 1em;opacity:.85;}
+    .fest-empty{text-align:center;padding:3.5em 1em;opacity:.85;}
     .fest-empty .material-icons{font-size:3.4em;color:#00a4dc;opacity:.7;}
     .fest-empty h3{margin:.6em 0 .3em;font-size:1.3em;}
-    .fest-empty p{opacity:.6;max-width:480px;margin:.4em auto;line-height:1.5;}
+    .fest-empty p{opacity:.6;max-width:520px;margin:.4em auto;line-height:1.5;}
     .fest-empty code{background:rgba(255,255,255,.1);padding:.1em .45em;border-radius:5px;}
 
     .fest-savebar{position:fixed;left:0;right:0;bottom:0;z-index:5;
-        background:linear-gradient(180deg,rgba(20,22,28,0),rgba(16,18,22,.96) 40%);
-        padding:1.2em 1em;pointer-events:none;}
-    .fest-savebar-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;
+        background:linear-gradient(180deg,rgba(20,22,28,0),rgba(16,18,22,.96) 40%);padding:1.2em 2.5em;pointer-events:none;}
+    .fest-savebar-inner{max-width:1680px;margin:0 auto;display:flex;align-items:center;
         justify-content:flex-end;gap:1em;pointer-events:auto;}
     .fest-savehint{opacity:.6;font-size:.9em;}
     .linkBtn{cursor:pointer;}
@@ -139,14 +186,45 @@
 
 <script type="text/javascript">
 (function () {
-    var page, db = { Festivals: [] };
+    var page, db = { Festivals: [] }, currentPath = '';
 
-    function imageUrl(name) { return name ? ApiClient.getUrl('Festivals/Images/' + name) : ''; }
-    function esc(v) {
+    function imageUrl(name){ return name ? ApiClient.getUrl('Festivals/Images/' + name) : ''; }
+    function esc(v){
         if (v === null || v === undefined) { return ''; }
         return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
     function splitList(v){return (v||'').split(',').map(function(s){return s.trim();}).filter(Boolean);}
+    function show(id, on){ page.querySelector(id).style.display = on ? '' : 'none'; }
+
+    // ---- view switching ---------------------------------------------------
+
+    function showSetup() {
+        show('#festSetup', true);
+        show('#festRoot', false);
+        show('#festSavebar', false);
+        show('#festTopActions', false);
+        page.querySelector('#festSub').textContent = 'First, choose where your festival recordings are';
+        Dashboard.showLoadingMsg();
+        ApiClient.getJSON(ApiClient.getUrl('Festivals/Libraries')).then(function (libs) {
+            var sel = page.querySelector('#libSelect');
+            sel.innerHTML = '<option value="">&mdash; choose a library &mdash;</option>' +
+                (libs || []).map(function (l) {
+                    return '<option value="' + esc(l.Path) + '">' + esc(l.Name) + ' — ' + esc(l.Path) + '</option>';
+                }).join('');
+            page.querySelector('#pathInput').value = currentPath || '';
+            Dashboard.hideLoadingMsg();
+        }).catch(function () { Dashboard.hideLoadingMsg(); });
+    }
+
+    function showMain() {
+        show('#festSetup', false);
+        show('#festRoot', true);
+        show('#festSavebar', true);
+        show('#festTopActions', true);
+        page.querySelector('#festSub').textContent = 'Enrich your festivals with artwork & info';
+        page.querySelector('#folderLabel').textContent = currentPath || 'Change folder';
+        loadTree();
+    }
 
     // ---- rendering --------------------------------------------------------
 
@@ -169,7 +247,7 @@
                     '<input is="emby-input" type="text" class="f-stage" value="' + esc(rec.Stage) + '" placeholder="Stage">' +
                     '<input is="emby-input" type="text" class="f-date" value="' + esc(rec.Date) + '" placeholder="Date / time">' +
                 '</div>' +
-                '<input is="emby-input" type="text" class="f-genres" value="' + esc((rec.Genres||[]).join(', ')) + '" placeholder="Genres (comma separated)" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.4em .55em;color:inherit;font-size:.85em;">' +
+                '<input is="emby-input" type="text" class="f-genres rec-inp" value="' + esc((rec.Genres||[]).join(', ')) + '" placeholder="Genres (comma separated)" style="width:100%;">' +
                 '<textarea is="emby-textarea" class="f-bio" rows="2" placeholder="Bio / description">' + esc(rec.Bio) + '</textarea>' +
                 '<textarea is="emby-textarea" class="f-setlist" rows="2" placeholder="Setlist">' + esc(rec.Setlist) + '</textarea>' +
             '</div>' +
@@ -210,10 +288,8 @@
                 '<div class="festHeroContent">' +
                     '<div><div class="festTitle">' + esc(f.Name) + '</div>' +
                         '<div class="festFileBadge">' + (f.Years||[]).length + ' editions</div></div>' +
-                    '<div class="festHeroBtns">' +
-                        '<label class="heroBtn linkBtn"><span class="material-icons">wallpaper</span><span>Hero</span>' +
-                            '<input type="file" accept="image/*" class="imgUpload" data-target="hero" style="display:none;"></label>' +
-                    '</div>' +
+                    '<label class="heroBtn linkBtn"><span class="material-icons">wallpaper</span><span>Hero</span>' +
+                        '<input type="file" accept="image/*" class="imgUpload" style="display:none;"></label>' +
                 '</div>' +
             '</div>' +
             '<div class="festBody">' +
@@ -237,10 +313,10 @@
         return '' +
         '<div class="fest-empty">' +
             '<span class="material-icons">festival</span>' +
-            '<h3>No festivals found yet</h3>' +
-            '<p>Create a library of type <strong>Shows</strong> named <code>Festivals</code> and point it at your festivals folder, using the layout ' +
-            '<code>Festivals / Rock am Ring / 2026 / Sabaton.mkv</code>.</p>' +
-            '<p>Then click <strong>Rescan library</strong> above and your festivals, years and performances will appear here automatically.</p>' +
+            '<h3>No festivals found in this folder</h3>' +
+            '<p>Make sure the selected folder uses the layout ' +
+            '<code>Rock am Ring / 2026 / Sabaton.mkv</code> and that Jellyfin has scanned the library.</p>' +
+            '<p>Then click <strong>Rescan</strong>, or pick a different folder with <strong>Change folder</strong>.</p>' +
         '</div>';
     }
 
@@ -248,7 +324,6 @@
         var root = page.querySelector('#festRoot');
         if (!db.Festivals || !db.Festivals.length) { root.innerHTML = emptyState(); return; }
         root.innerHTML = db.Festivals.map(festCard).join('');
-        // open the first year of each festival by default
         root.querySelectorAll('.festCard').forEach(function (fc) {
             var first = fc.querySelector('.yearCard');
             if (first) { first.classList.add('open'); }
@@ -308,11 +383,15 @@
 
     function onClick(e) {
         var head = e.target.closest('.yearHead');
-        if (head) { head.parentElement.classList.toggle('open'); return; }
+        if (head) { head.parentElement.classList.toggle('open'); }
     }
 
     function onChange(e) {
         var input = e.target;
+        if (input.id === 'libSelect') {
+            if (input.value) { page.querySelector('#pathInput').value = input.value; }
+            return;
+        }
         if (!input.classList || !input.classList.contains('imgUpload') || !input.files || !input.files.length) { return; }
         var wrap = input.closest('[data-img]');
         var fd = new FormData();
@@ -322,8 +401,7 @@
         .then(function (res) {
             wrap.querySelector('.imgValue').value = res.fileName;
             var url = imageUrl(res.fileName);
-            var heroBg = wrap.classList.contains('festHero');
-            if (heroBg) { wrap.style.backgroundImage = "url('" + url + "')"; wrap.classList.remove('empty'); }
+            if (wrap.classList.contains('festHero')) { wrap.style.backgroundImage = "url('" + url + "')"; wrap.classList.remove('empty'); }
             var thumb = wrap.querySelector('.recThumb');
             if (thumb) { thumb.style.backgroundImage = "url('" + url + "')"; thumb.style.backgroundSize='cover'; }
             var poster = wrap.querySelector('.posterImg');
@@ -333,7 +411,38 @@
         }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Upload failed.'); });
     }
 
-    function load() {
+    function browseFolder() {
+        try {
+            require(['directorybrowser'], function (directorybrowser) {
+                var Ctor = directorybrowser && directorybrowser.default ? directorybrowser.default : directorybrowser;
+                var picker = new Ctor();
+                picker.show({
+                    header: 'Select your festivals folder',
+                    path: page.querySelector('#pathInput').value,
+                    callback: function (path) {
+                        if (path) { page.querySelector('#pathInput').value = path; }
+                        picker.close();
+                    }
+                });
+            });
+        } catch (err) {
+            Dashboard.alert('Folder browser unavailable — please type the path manually.');
+        }
+    }
+
+    function continueSetup() {
+        var path = page.querySelector('#pathInput').value.trim();
+        if (!path) { Dashboard.alert('Please choose a library or enter a folder path.'); return; }
+        Dashboard.showLoadingMsg();
+        ApiClient.ajax({ type:'POST', url: ApiClient.getUrl('Festivals/Config'),
+            data: JSON.stringify({ LibraryPath: path }), contentType:'application/json' })
+        .then(function () { currentPath = path; Dashboard.hideLoadingMsg(); showMain(); })
+        .catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Could not save the folder.'); });
+    }
+
+    // ---- data -------------------------------------------------------------
+
+    function loadTree() {
         Dashboard.showLoadingMsg();
         ApiClient.getJSON(ApiClient.getUrl('Festivals/Tree')).then(function (res) {
             db = res && res.Festivals ? res : { Festivals: [] };
@@ -354,13 +463,25 @@
         }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Save failed.'); });
     }
 
+    function init() {
+        Dashboard.showLoadingMsg();
+        ApiClient.getJSON(ApiClient.getUrl('Festivals/Config')).then(function (cfg) {
+            currentPath = (cfg && cfg.LibraryPath) ? cfg.LibraryPath : '';
+            Dashboard.hideLoadingMsg();
+            if (currentPath) { showMain(); } else { showSetup(); }
+        }).catch(function () { Dashboard.hideLoadingMsg(); showSetup(); });
+    }
+
     document.querySelector('#FestivalsConfigPage').addEventListener('viewshow', function () {
         page = this;
         page.addEventListener('click', onClick);
         page.addEventListener('change', onChange);
         page.querySelector('#btnSave').addEventListener('click', save);
-        page.querySelector('#btnRescan').addEventListener('click', load);
-        load();
+        page.querySelector('#btnRescan').addEventListener('click', loadTree);
+        page.querySelector('#btnChangeFolder').addEventListener('click', showSetup);
+        page.querySelector('#btnBrowse').addEventListener('click', browseFolder);
+        page.querySelector('#btnContinue').addEventListener('click', continueSetup);
+        init();
     });
 })();
 </script>
