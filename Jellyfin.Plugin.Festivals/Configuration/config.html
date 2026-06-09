@@ -6,211 +6,295 @@
 </head>
 <body>
 <div id="FestivalsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
-     data-require="emby-input,emby-button,emby-select,emby-textarea,emby-collapse">
+     data-require="emby-input,emby-button,emby-select,emby-textarea">
     <div data-role="content">
         <div class="content-primary">
 
-            <div class="verticalSection verticalSection-extrabottompadding">
-                <div class="sectionTitleContainer flex align-items-center">
-                    <h2 class="sectionTitle">Festivals</h2>
-                    <button is="emby-button" type="button" id="btnAddFestival"
-                            class="fab emby-button" style="margin-left:1em;" title="Add festival">
-                        <span class="material-icons add" aria-hidden="true"></span>
-                    </button>
+            <div class="fest-topbar">
+                <div class="fest-topbar-title">
+                    <span class="material-icons fest-topbar-icon" aria-hidden="true">festival</span>
+                    <div>
+                        <h1 class="fest-h1">Festivals</h1>
+                        <div class="fest-sub">Enrich your auto-discovered festivals with artwork &amp; info</div>
+                    </div>
                 </div>
-                <p class="fieldDescription" style="margin-top:0;">
-                    Manage festivals, their editions (years) and the recorded performances.
-                    Match values must equal the folder / file names in your media library.
-                </p>
-            </div>
-
-            <div id="festivalList"></div>
-
-            <div style="margin-top:2em;">
-                <button is="emby-button" type="button" id="btnSave" class="raised button-submit block emby-button">
-                    <span>Save</span>
+                <button is="emby-button" type="button" id="btnRescan" class="fest-btn-ghost emby-button">
+                    <span class="material-icons" aria-hidden="true">sync</span><span>Rescan library</span>
                 </button>
             </div>
+
+            <div id="festRoot"></div>
 
         </div>
     </div>
 
+    <div class="fest-savebar">
+        <div class="fest-savebar-inner">
+            <span id="festSaveHint" class="fest-savehint"></span>
+            <button is="emby-button" type="button" id="btnSave" class="fest-btn-primary emby-button">
+                <span class="material-icons" aria-hidden="true">save</span><span>Save changes</span>
+            </button>
+        </div>
+    </div>
+
 <style>
-    .festCard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:1.2em;margin-bottom:1.2em;}
-    .festCard .cardHead{display:flex;align-items:center;gap:.6em;margin-bottom:.8em;}
-    .festCard .cardHead .grow{flex:1;}
-    .yearCard{background:rgba(255,255,255,.03);border-left:3px solid #00a4dc;border-radius:6px;padding:1em;margin:.8em 0;}
-    .recCard{background:rgba(0,0,0,.18);border-radius:6px;padding:.9em;margin:.6em 0;}
-    .fRow{display:flex;flex-wrap:wrap;gap:1em;}
-    .fRow > div{flex:1;min-width:220px;}
-    .imgField{display:flex;align-items:center;gap:.8em;margin:.4em 0;}
-    .imgField img{height:64px;width:auto;border-radius:4px;background:#111;object-fit:cover;display:none;}
-    .imgField img.has{display:block;}
-    .miniLabel{font-size:.82em;opacity:.7;margin-bottom:.2em;display:block;}
-    .rowBtns{display:flex;gap:.5em;align-items:center;}
-    .subTitle{font-weight:600;opacity:.85;margin:.4em 0;}
+    #FestivalsConfigPage .content-primary { padding-bottom: 6em; max-width: 1100px; }
+
+    .fest-topbar{display:flex;align-items:center;justify-content:space-between;gap:1em;
+        flex-wrap:wrap;margin:.5em 0 1.6em;}
+    .fest-topbar-title{display:flex;align-items:center;gap:.9em;}
+    .fest-topbar-icon{font-size:2.6em;color:#00a4dc;
+        filter:drop-shadow(0 2px 8px rgba(0,164,220,.35));}
+    .fest-h1{margin:0;font-size:1.9em;font-weight:700;letter-spacing:-.02em;}
+    .fest-sub{opacity:.6;font-size:.95em;margin-top:.15em;}
+
+    .fest-btn-ghost{background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.12)!important;
+        border-radius:10px!important;padding:.55em 1em!important;display:inline-flex;align-items:center;gap:.4em;}
+    .fest-btn-ghost:hover{background:rgba(255,255,255,.12)!important;}
+    .fest-btn-primary{background:linear-gradient(135deg,#00a4dc,#0081b4)!important;color:#fff!important;
+        border:0!important;border-radius:10px!important;padding:.7em 1.4em!important;font-weight:600;
+        display:inline-flex;align-items:center;gap:.5em;box-shadow:0 6px 18px rgba(0,164,220,.35);}
+
+    .festCard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);
+        border-radius:16px;margin-bottom:1.6em;overflow:hidden;
+        box-shadow:0 8px 30px rgba(0,0,0,.25);}
+
+    .festHero{position:relative;height:190px;background:#14161c;
+        background-size:cover;background-position:center;display:flex;align-items:flex-end;}
+    .festHero::after{content:"";position:absolute;inset:0;
+        background:linear-gradient(180deg,rgba(10,12,16,.1) 0%,rgba(10,12,16,.88) 100%);}
+    .festHero.empty{background:radial-gradient(120% 140% at 20% 0%,#1d2230,#0d0f14);}
+    .festHeroContent{position:relative;z-index:1;padding:1.3em 1.5em;width:100%;
+        display:flex;align-items:flex-end;justify-content:space-between;gap:1em;}
+    .festTitle{font-size:1.6em;font-weight:700;letter-spacing:-.01em;
+        text-shadow:0 2px 12px rgba(0,0,0,.6);}
+    .festFileBadge{font-size:.72em;opacity:.55;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:.2em;}
+    .festHeroBtns{display:flex;gap:.5em;}
+    .heroBtn{background:rgba(0,0,0,.45)!important;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18)!important;
+        border-radius:9px!important;color:#fff!important;padding:.45em .7em!important;
+        display:inline-flex;align-items:center;gap:.35em;cursor:pointer;font-size:.85em;}
+    .heroBtn:hover{background:rgba(0,0,0,.65)!important;}
+
+    .festBody{padding:1.3em 1.5em;}
+    .fest-grid{display:grid;grid-template-columns:1fr 1fr;gap:1em;}
+    @media(max-width:680px){.fest-grid{grid-template-columns:1fr;}}
+    .fld{display:flex;flex-direction:column;gap:.3em;margin-bottom:.9em;}
+    .fld label{font-size:.78em;text-transform:uppercase;letter-spacing:.04em;opacity:.55;font-weight:600;}
+    .fld input,.fld textarea{background:rgba(0,0,0,.25)!important;border:1px solid rgba(255,255,255,.1)!important;
+        border-radius:9px!important;padding:.6em .8em!important;color:inherit;width:100%;box-sizing:border-box;}
+    .fld textarea{resize:vertical;min-height:3em;font-family:inherit;}
+
+    .yearHead{display:flex;align-items:center;gap:.6em;cursor:pointer;
+        padding:.7em .2em;border-top:1px solid rgba(255,255,255,.07);user-select:none;}
+    .yearHead:hover .yearTitle{color:#00a4dc;}
+    .yearChevron{transition:transform .2s;opacity:.6;}
+    .yearCard.open .yearChevron{transform:rotate(90deg);}
+    .yearTitle{font-size:1.15em;font-weight:700;}
+    .yearCount{font-size:.8em;opacity:.5;background:rgba(255,255,255,.07);
+        padding:.15em .6em;border-radius:20px;}
+    .yearGrow{flex:1;}
+    .yearBody{display:none;padding:.4em 0 1em;}
+    .yearCard.open .yearBody{display:block;}
+
+    .recGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1em;margin-top:.6em;}
+    .recCard{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);
+        border-radius:12px;padding:1em;display:flex;gap:.9em;}
+    .recThumbWrap{position:relative;flex:0 0 84px;}
+    .recThumb{width:84px;height:84px;border-radius:10px;object-fit:cover;
+        background:#0d0f14 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="%23333"><path d="M12 14a3 3 0 100-6 3 3 0 000 6zm0-9a4 4 0 110 8 4 4 0 010-8z"/></svg>') center/40% no-repeat;}
+    .recThumbBtn{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;
+        background:#00a4dc;border:2px solid #14161c;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;color:#fff;}
+    .recThumbBtn .material-icons{font-size:15px;}
+    .recMain{flex:1;min-width:0;}
+    .recArtist input{background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.12)!important;
+        border-radius:0!important;padding:.1em 0!important;font-size:1.05em;font-weight:600;width:100%;}
+    .recMeta{display:flex;gap:.5em;margin:.5em 0;flex-wrap:wrap;}
+    .recMeta input{flex:1;min-width:90px;font-size:.85em;background:rgba(0,0,0,.25)!important;
+        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;padding:.4em .55em!important;
+        color:inherit;box-sizing:border-box;}
+    .recCard textarea{width:100%;box-sizing:border-box;background:rgba(0,0,0,.25)!important;
+        border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;padding:.45em .6em!important;
+        color:inherit;font-size:.85em;resize:vertical;min-height:2.4em;font-family:inherit;margin-top:.3em;}
+    .fileTag{font-size:.7em;opacity:.4;font-family:ui-monospace,Menlo,Consolas,monospace;}
+
+    .posterChip{display:flex;align-items:center;gap:.6em;margin-bottom:.9em;}
+    .posterImg{width:46px;height:68px;border-radius:6px;object-fit:cover;background:#0d0f14;display:none;}
+    .posterImg.has{display:block;}
+
+    .fest-empty{text-align:center;padding:4em 1em;opacity:.85;}
+    .fest-empty .material-icons{font-size:3.4em;color:#00a4dc;opacity:.7;}
+    .fest-empty h3{margin:.6em 0 .3em;font-size:1.3em;}
+    .fest-empty p{opacity:.6;max-width:480px;margin:.4em auto;line-height:1.5;}
+    .fest-empty code{background:rgba(255,255,255,.1);padding:.1em .45em;border-radius:5px;}
+
+    .fest-savebar{position:fixed;left:0;right:0;bottom:0;z-index:5;
+        background:linear-gradient(180deg,rgba(20,22,28,0),rgba(16,18,22,.96) 40%);
+        padding:1.2em 1em;pointer-events:none;}
+    .fest-savebar-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;
+        justify-content:flex-end;gap:1em;pointer-events:auto;}
+    .fest-savehint{opacity:.6;font-size:.9em;}
+    .linkBtn{cursor:pointer;}
 </style>
 
 <script type="text/javascript">
 (function () {
-    var pluginId = 'b9f7e2a4-3c1d-4e6f-8a2b-1d5c7e9f0a3b';
-    var page;
-    var db = { Festivals: [] };
+    var page, db = { Festivals: [] };
 
-    function uid() {
-        return 'f' + Math.random().toString(36).slice(2, 10);
+    function imageUrl(name) { return name ? ApiClient.getUrl('Festivals/Images/' + name) : ''; }
+    function esc(v) {
+        if (v === null || v === undefined) { return ''; }
+        return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+    function splitList(v){return (v||'').split(',').map(function(s){return s.trim();}).filter(Boolean);}
 
-    function imageUrl(name) {
-        return name ? ApiClient.getUrl('Festivals/Images/' + name) : '';
-    }
+    // ---- rendering --------------------------------------------------------
 
-    // ---- rendering ---------------------------------------------------------
-
-    function imageField(label, current, kind, idx) {
-        var url = imageUrl(current);
+    function recCard(rec) {
+        var img = rec.ArtistImage ? imageUrl(rec.ArtistImage) : '';
         return '' +
-            '<div class="imgField" data-imgkind="' + kind + '" data-imgidx="' + idx + '">' +
-                '<img class="imgPreview' + (current ? ' has' : '') + '" src="' + url + '" alt="">' +
-                '<input type="hidden" class="imgValue" value="' + (current || '') + '">' +
-                '<label class="emby-button raised" style="cursor:pointer;margin:0;">' +
-                    '<span>' + label + '</span>' +
+        '<div class="recCard">' +
+            '<div class="recThumbWrap" data-img="artist">' +
+                '<input type="hidden" class="imgValue" value="' + esc(rec.ArtistImage) + '">' +
+                '<div class="recThumb"' + (img ? ' style="background-image:url(\'' + img + '\');background-size:cover;"' : '') + '></div>' +
+                '<label class="recThumbBtn linkBtn" title="Upload artist photo">' +
+                    '<span class="material-icons">photo_camera</span>' +
                     '<input type="file" accept="image/*" class="imgUpload" style="display:none;">' +
                 '</label>' +
-                (current ? '<button is="emby-button" type="button" class="imgClear emby-button"><span class="material-icons close"></span></button>' : '') +
-            '</div>';
-    }
-
-    function recordingCard(rec, fi, yi, ri) {
-        return '' +
-        '<div class="recCard" data-rec="' + ri + '">' +
-            '<div class="fRow">' +
-                '<div><label class="miniLabel">File match (file name without extension)</label>' +
-                    '<input is="emby-input" type="text" class="f-fileMatch" value="' + esc(rec.FileMatch) + '"></div>' +
-                '<div><label class="miniLabel">Artist (episode title)</label>' +
-                    '<input is="emby-input" type="text" class="f-artist" value="' + esc(rec.Artist) + '"></div>' +
             '</div>' +
-            '<div class="fRow">' +
-                '<div><label class="miniLabel">Stage</label>' +
-                    '<input is="emby-input" type="text" class="f-stage" value="' + esc(rec.Stage) + '"></div>' +
-                '<div><label class="miniLabel">Date / time</label>' +
-                    '<input is="emby-input" type="text" class="f-date" value="' + esc(rec.Date) + '"></div>' +
-                '<div><label class="miniLabel">Genres (comma separated)</label>' +
-                    '<input is="emby-input" type="text" class="f-genres" value="' + esc((rec.Genres || []).join(', ')) + '"></div>' +
-            '</div>' +
-            '<label class="miniLabel">Bio / description</label>' +
-            '<textarea is="emby-textarea" class="f-bio" rows="2">' + esc(rec.Bio) + '</textarea>' +
-            '<label class="miniLabel">Setlist</label>' +
-            '<textarea is="emby-textarea" class="f-setlist" rows="2">' + esc(rec.Setlist) + '</textarea>' +
-            imageField('Artist image', rec.ArtistImage, 'artist', '') +
-            '<div class="rowBtns" style="justify-content:flex-end;">' +
-                '<button is="emby-button" type="button" class="btnDelRec emby-button"><span class="material-icons delete"></span><span>Remove performance</span></button>' +
+            '<div class="recMain">' +
+                '<div class="recArtist"><input is="emby-input" type="text" class="f-artist" value="' + esc(rec.Artist) + '" placeholder="Artist"></div>' +
+                '<div class="fileTag">' + esc(rec.FileMatch) + '</div>' +
+                '<div class="recMeta">' +
+                    '<input is="emby-input" type="text" class="f-stage" value="' + esc(rec.Stage) + '" placeholder="Stage">' +
+                    '<input is="emby-input" type="text" class="f-date" value="' + esc(rec.Date) + '" placeholder="Date / time">' +
+                '</div>' +
+                '<input is="emby-input" type="text" class="f-genres" value="' + esc((rec.Genres||[]).join(', ')) + '" placeholder="Genres (comma separated)" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.4em .55em;color:inherit;font-size:.85em;">' +
+                '<textarea is="emby-textarea" class="f-bio" rows="2" placeholder="Bio / description">' + esc(rec.Bio) + '</textarea>' +
+                '<textarea is="emby-textarea" class="f-setlist" rows="2" placeholder="Setlist">' + esc(rec.Setlist) + '</textarea>' +
             '</div>' +
         '</div>';
     }
 
-    function yearCard(year, fi, yi) {
-        var recs = (year.Recordings || []).map(function (r, ri) { return recordingCard(r, fi, yi, ri); }).join('');
+    function yearCard(year) {
+        var recs = (year.Recordings||[]).map(recCard).join('');
         return '' +
-        '<div class="yearCard" data-year="' + yi + '">' +
-            '<div class="fRow">' +
-                '<div><label class="miniLabel">Year</label>' +
-                    '<input is="emby-input" type="number" class="y-year" value="' + esc(year.Year) + '"></div>' +
-                '<div style="flex:2;"><label class="miniLabel">Description</label>' +
+        '<div class="yearCard" data-year="' + esc(year.Year) + '">' +
+            '<div class="yearHead">' +
+                '<span class="material-icons yearChevron">chevron_right</span>' +
+                '<span class="yearTitle">' + esc(year.Year) + '</span>' +
+                '<span class="yearGrow"></span>' +
+                '<span class="yearCount">' + (year.Recordings||[]).length + ' performances</span>' +
+            '</div>' +
+            '<div class="yearBody">' +
+                '<div class="posterChip" data-img="yearPoster">' +
+                    '<input type="hidden" class="imgValue" value="' + esc(year.Poster) + '">' +
+                    '<img class="posterImg' + (year.Poster ? ' has' : '') + '" src="' + imageUrl(year.Poster) + '">' +
+                    '<label class="heroBtn linkBtn"><span class="material-icons">image</span><span>Edition poster</span>' +
+                        '<input type="file" accept="image/*" class="imgUpload" style="display:none;"></label>' +
+                '</div>' +
+                '<div class="fld"><label>Edition description</label>' +
                     '<input is="emby-input" type="text" class="y-desc" value="' + esc(year.Description) + '"></div>' +
-            '</div>' +
-            imageField('Edition poster', year.Poster, 'yearPoster', '') +
-            '<div class="subTitle">Performances</div>' +
-            '<div class="recList">' + recs + '</div>' +
-            '<div class="rowBtns">' +
-                '<button is="emby-button" type="button" class="btnAddRec emby-button raised"><span class="material-icons add"></span><span>Add performance</span></button>' +
-                '<button is="emby-button" type="button" class="btnDelYear emby-button"><span class="material-icons delete"></span><span>Remove year</span></button>' +
+                '<div class="recGrid">' + recs + '</div>' +
             '</div>' +
         '</div>';
     }
 
-    function festivalCard(f, fi) {
-        var years = (f.Years || []).map(function (y, yi) { return yearCard(y, fi, yi); }).join('');
+    function festCard(f) {
+        var hero = f.HeroImage ? imageUrl(f.HeroImage) : '';
+        var years = (f.Years||[]).map(yearCard).join('');
         return '' +
-        '<div class="festCard" data-fest="' + fi + '">' +
-            '<div class="cardHead">' +
-                '<span class="material-icons festival" style="opacity:.6;"></span>' +
-                '<div class="grow"><input is="emby-input" type="text" class="f-name" placeholder="Festival name (= folder name)" value="' + esc(f.Name) + '"></div>' +
-                '<button is="emby-button" type="button" class="btnDelFest emby-button"><span class="material-icons delete"></span></button>' +
+        '<div class="festCard" data-fest="' + esc(f.Name) + '">' +
+            '<div class="festHero' + (hero ? '' : ' empty') + '"' + (hero ? ' style="background-image:url(\'' + hero + '\')"' : '') + ' data-img="hero">' +
+                '<input type="hidden" class="imgValue" value="' + esc(f.HeroImage) + '">' +
+                '<div class="festHeroContent">' +
+                    '<div><div class="festTitle">' + esc(f.Name) + '</div>' +
+                        '<div class="festFileBadge">' + (f.Years||[]).length + ' editions</div></div>' +
+                    '<div class="festHeroBtns">' +
+                        '<label class="heroBtn linkBtn"><span class="material-icons">wallpaper</span><span>Hero</span>' +
+                            '<input type="file" accept="image/*" class="imgUpload" data-target="hero" style="display:none;"></label>' +
+                    '</div>' +
+                '</div>' +
             '</div>' +
-            '<div class="fRow">' +
-                '<div><label class="miniLabel">Location</label>' +
-                    '<input is="emby-input" type="text" class="f-location" value="' + esc(f.Location) + '"></div>' +
-                '<div style="flex:2;"><label class="miniLabel">Genres (comma separated)</label>' +
-                    '<input is="emby-input" type="text" class="f-fgenres" value="' + esc((f.Genres || []).join(', ')) + '"></div>' +
+            '<div class="festBody">' +
+                '<div class="posterChip" data-img="poster">' +
+                    '<input type="hidden" class="imgValue" value="' + esc(f.Poster) + '">' +
+                    '<img class="posterImg' + (f.Poster ? ' has' : '') + '" src="' + imageUrl(f.Poster) + '">' +
+                    '<label class="heroBtn linkBtn"><span class="material-icons">image</span><span>Poster</span>' +
+                        '<input type="file" accept="image/*" class="imgUpload" style="display:none;"></label>' +
+                '</div>' +
+                '<div class="fest-grid">' +
+                    '<div class="fld"><label>Location</label><input is="emby-input" type="text" class="f-location" value="' + esc(f.Location) + '"></div>' +
+                    '<div class="fld"><label>Genres (comma separated)</label><input is="emby-input" type="text" class="f-fgenres" value="' + esc((f.Genres||[]).join(', ')) + '"></div>' +
+                '</div>' +
+                '<div class="fld"><label>Description</label><textarea is="emby-textarea" class="f-desc" rows="3">' + esc(f.Description) + '</textarea></div>' +
+                '<div class="yearList">' + years + '</div>' +
             '</div>' +
-            '<label class="miniLabel">Description</label>' +
-            '<textarea is="emby-textarea" class="f-desc" rows="2">' + esc(f.Description) + '</textarea>' +
-            '<div class="fRow">' +
-                '<div>' + imageField('Hero / backdrop', f.HeroImage, 'hero', '') + '</div>' +
-                '<div>' + imageField('Poster', f.Poster, 'poster', '') + '</div>' +
-            '</div>' +
-            '<div class="subTitle">Years</div>' +
-            '<div class="yearList">' + years + '</div>' +
-            '<button is="emby-button" type="button" class="btnAddYear emby-button raised"><span class="material-icons add"></span><span>Add year</span></button>' +
+        '</div>';
+    }
+
+    function emptyState() {
+        return '' +
+        '<div class="fest-empty">' +
+            '<span class="material-icons">festival</span>' +
+            '<h3>No festivals found yet</h3>' +
+            '<p>Create a library of type <strong>Shows</strong> named <code>Festivals</code> and point it at your festivals folder, using the layout ' +
+            '<code>Festivals / Rock am Ring / 2026 / Sabaton.mkv</code>.</p>' +
+            '<p>Then click <strong>Rescan library</strong> above and your festivals, years and performances will appear here automatically.</p>' +
         '</div>';
     }
 
     function render() {
-        var html = db.Festivals.map(function (f, fi) { return festivalCard(f, fi); }).join('');
-        page.querySelector('#festivalList').innerHTML = html ||
-            '<p class="fieldDescription">No festivals yet. Use the + button above to add one.</p>';
+        var root = page.querySelector('#festRoot');
+        if (!db.Festivals || !db.Festivals.length) { root.innerHTML = emptyState(); return; }
+        root.innerHTML = db.Festivals.map(festCard).join('');
+        // open the first year of each festival by default
+        root.querySelectorAll('.festCard').forEach(function (fc) {
+            var first = fc.querySelector('.yearCard');
+            if (first) { first.classList.add('open'); }
+        });
     }
 
-    function esc(v) {
-        if (v === null || v === undefined) { return ''; }
-        return String(v)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
+    // ---- DOM -> state -----------------------------------------------------
 
-    function splitList(v) {
-        return (v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-    }
-
-    // ---- DOM -> state ------------------------------------------------------
-
-    function imgValueIn(scope) {
-        var el = scope.querySelector(':scope > .imgField > .imgValue');
-        return el ? el.value || null : null;
+    function val(scope, sel){ var el=scope.querySelector(sel); return el?el.value:''; }
+    function imgOf(scope, kind){
+        if(!scope)return null;
+        var sel='[data-img="'+kind+'"]';
+        var f=(scope.matches&&scope.matches(sel))?scope:scope.querySelector(sel);
+        if(!f)return null;
+        var v=f.querySelector('.imgValue'); return v&&v.value?v.value:null;
     }
 
     function syncFromDom() {
         var fests = [];
-        page.querySelectorAll('#festivalList > .festCard').forEach(function (fc, fi) {
-            var f = db.Festivals[fi] || {};
+        page.querySelectorAll('#festRoot > .festCard').forEach(function (fc) {
             var festival = {
-                Id: f.Id || uid(),
-                Name: val(fc, '.f-name'),
+                Name: fc.dataset.fest,
                 Location: val(fc, '.f-location') || null,
                 Description: val(fc, '.f-desc') || null,
                 Genres: splitList(val(fc, '.f-fgenres')),
-                HeroImage: imgValueOf(fc, 'hero'),
-                Poster: imgValueOf(fc, 'poster'),
+                HeroImage: imgOf(fc, 'hero'),
+                Poster: imgOf(fc, 'poster'),
                 Years: []
             };
             fc.querySelectorAll('.yearList > .yearCard').forEach(function (yc) {
                 var year = {
-                    Year: parseInt(val(yc, '.y-year'), 10) || 0,
+                    Year: parseInt(yc.dataset.year, 10) || 0,
                     Description: val(yc, '.y-desc') || null,
-                    Poster: imgValueOf(yc, 'yearPoster'),
+                    Poster: imgOf(yc, 'yearPoster'),
                     Recordings: []
                 };
-                yc.querySelectorAll('.recList > .recCard').forEach(function (rc) {
+                yc.querySelectorAll('.recGrid > .recCard').forEach(function (rc) {
                     year.Recordings.push({
-                        FileMatch: val(rc, '.f-fileMatch'),
+                        FileMatch: rc.querySelector('.fileTag').textContent,
                         Artist: val(rc, '.f-artist'),
                         Stage: val(rc, '.f-stage') || null,
                         Date: val(rc, '.f-date') || null,
                         Genres: splitList(val(rc, '.f-genres')),
                         Bio: val(rc, '.f-bio') || null,
                         Setlist: val(rc, '.f-setlist') || null,
-                        ArtistImage: imgValueOf(rc, 'artist')
+                        ArtistImage: imgOf(rc, 'artist')
                     });
                 });
                 festival.Years.push(year);
@@ -220,128 +304,62 @@
         db.Festivals = fests;
     }
 
-    function val(scope, sel) {
-        var el = scope.querySelector(sel);
-        return el ? el.value : '';
-    }
-
-    function imgValueOf(scope, kind) {
-        var field = scope.querySelector('.imgField[data-imgkind="' + kind + '"]');
-        if (!field) { return null; }
-        var v = field.querySelector('.imgValue');
-        return v && v.value ? v.value : null;
-    }
-
-    // ---- events ------------------------------------------------------------
+    // ---- events -----------------------------------------------------------
 
     function onClick(e) {
-        var t = e.target.closest('button');
-        if (!t) { return; }
-
-        if (t.id === 'btnAddFestival') {
-            syncFromDom();
-            db.Festivals.push({ Id: uid(), Name: '', Genres: [], Years: [] });
-            render();
-            return;
-        }
-
-        var festCard = t.closest('.festCard');
-        var fi = festCard ? parseInt(festCard.dataset.fest, 10) : -1;
-
-        if (t.classList.contains('btnDelFest')) {
-            syncFromDom(); db.Festivals.splice(fi, 1); render(); return;
-        }
-        if (t.classList.contains('btnAddYear')) {
-            syncFromDom();
-            db.Festivals[fi].Years.push({ Year: new Date().getFullYear(), Recordings: [] });
-            render(); return;
-        }
-
-        var yearCardEl = t.closest('.yearCard');
-        var yi = yearCardEl ? Array.prototype.indexOf.call(festCard.querySelectorAll('.yearList > .yearCard'), yearCardEl) : -1;
-
-        if (t.classList.contains('btnDelYear')) {
-            syncFromDom(); db.Festivals[fi].Years.splice(yi, 1); render(); return;
-        }
-        if (t.classList.contains('btnAddRec')) {
-            syncFromDom();
-            db.Festivals[fi].Years[yi].Recordings.push({ FileMatch: '', Artist: '', Genres: [] });
-            render(); return;
-        }
-        if (t.classList.contains('btnDelRec')) {
-            var recCard = t.closest('.recCard');
-            var ri = Array.prototype.indexOf.call(yearCardEl.querySelectorAll('.recList > .recCard'), recCard);
-            syncFromDom(); db.Festivals[fi].Years[yi].Recordings.splice(ri, 1); render(); return;
-        }
-        if (t.classList.contains('imgClear')) {
-            var field = t.closest('.imgField');
-            field.querySelector('.imgValue').value = '';
-            var img = field.querySelector('.imgPreview');
-            img.src = ''; img.classList.remove('has');
-            t.remove();
-            return;
-        }
+        var head = e.target.closest('.yearHead');
+        if (head) { head.parentElement.classList.toggle('open'); return; }
     }
 
-    function onFileChange(e) {
+    function onChange(e) {
         var input = e.target;
-        if (!input.classList.contains('imgUpload') || !input.files || !input.files.length) { return; }
-        var field = input.closest('.imgField');
+        if (!input.classList || !input.classList.contains('imgUpload') || !input.files || !input.files.length) { return; }
+        var wrap = input.closest('[data-img]');
         var fd = new FormData();
         fd.append('file', input.files[0]);
         Dashboard.showLoadingMsg();
-        ApiClient.ajax({
-            type: 'POST',
-            url: ApiClient.getUrl('Festivals/Images'),
-            data: fd,
-            dataType: 'json'
-        }).then(function (res) {
-            field.querySelector('.imgValue').value = res.fileName;
-            var img = field.querySelector('.imgPreview');
-            img.src = imageUrl(res.fileName); img.classList.add('has');
+        ApiClient.ajax({ type:'POST', url: ApiClient.getUrl('Festivals/Images'), data: fd, dataType:'json' })
+        .then(function (res) {
+            wrap.querySelector('.imgValue').value = res.fileName;
+            var url = imageUrl(res.fileName);
+            var heroBg = wrap.classList.contains('festHero');
+            if (heroBg) { wrap.style.backgroundImage = "url('" + url + "')"; wrap.classList.remove('empty'); }
+            var thumb = wrap.querySelector('.recThumb');
+            if (thumb) { thumb.style.backgroundImage = "url('" + url + "')"; thumb.style.backgroundSize='cover'; }
+            var poster = wrap.querySelector('.posterImg');
+            if (poster) { poster.src = url; poster.classList.add('has'); }
             input.value = '';
             Dashboard.hideLoadingMsg();
-        }).catch(function () {
-            Dashboard.hideLoadingMsg();
-            Dashboard.alert('Upload failed.');
-        });
+        }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Upload failed.'); });
     }
 
     function load() {
         Dashboard.showLoadingMsg();
-        ApiClient.getJSON(ApiClient.getUrl('Festivals')).then(function (res) {
+        ApiClient.getJSON(ApiClient.getUrl('Festivals/Tree')).then(function (res) {
             db = res && res.Festivals ? res : { Festivals: [] };
-            render();
-            Dashboard.hideLoadingMsg();
-        }).catch(function () {
-            db = { Festivals: [] };
-            render();
-            Dashboard.hideLoadingMsg();
-        });
+            render(); Dashboard.hideLoadingMsg();
+        }).catch(function () { db = { Festivals: [] }; render(); Dashboard.hideLoadingMsg(); });
     }
 
     function save() {
         syncFromDom();
         Dashboard.showLoadingMsg();
-        ApiClient.ajax({
-            type: 'PUT',
-            url: ApiClient.getUrl('Festivals'),
-            data: JSON.stringify(db),
-            contentType: 'application/json'
-        }).then(function () {
+        ApiClient.ajax({ type:'PUT', url: ApiClient.getUrl('Festivals'),
+            data: JSON.stringify(db), contentType:'application/json' })
+        .then(function () {
             Dashboard.hideLoadingMsg();
-            Dashboard.alert('Festivals saved. Refresh your library metadata to apply changes.');
-        }).catch(function () {
-            Dashboard.hideLoadingMsg();
-            Dashboard.alert('Save failed.');
-        });
+            var hint = page.querySelector('#festSaveHint');
+            hint.textContent = 'Saved. Run “Refresh metadata” on the library to apply.';
+            setTimeout(function(){ hint.textContent=''; }, 6000);
+        }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Save failed.'); });
     }
 
     document.querySelector('#FestivalsConfigPage').addEventListener('viewshow', function () {
         page = this;
         page.addEventListener('click', onClick);
-        page.addEventListener('change', onFileChange);
+        page.addEventListener('change', onChange);
         page.querySelector('#btnSave').addEventListener('click', save);
+        page.querySelector('#btnRescan').addEventListener('click', load);
         load();
     });
 })();

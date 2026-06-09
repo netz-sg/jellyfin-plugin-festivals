@@ -1,7 +1,7 @@
 ---
 name: "Festivals"
 guid: "b9f7e2a4-3c1d-4e6f-8a2b-1d5c7e9f0a3b"
-version: "1.0.0.0"
+version: "1.0.1.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Browse music festivals as a native library: festival → years → recorded performances."
@@ -15,4 +15,5 @@ owner: "lifad"
 artifacts:
 - "Jellyfin.Plugin.Festivals.dll"
 changelog: >
+  1.0.1.0 - Auto-discovery from the library, modernized settings page, sidebar menu entry.
   1.0.0.0 - Initial release.

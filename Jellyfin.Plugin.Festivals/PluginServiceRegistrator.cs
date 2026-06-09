@@ -15,5 +15,6 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     {
         // The store is created in the Plugin constructor; expose it for injection.
         serviceCollection.AddSingleton(_ => Plugin.Instance!.Store);
+        serviceCollection.AddScoped<FestivalDiscovery>();
     }
 }
