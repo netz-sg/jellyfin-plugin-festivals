@@ -78,10 +78,12 @@ public class FestivalImageProvider : IDynamicImageProvider
 
                 return type == ImageType.Backdrop ? festival.HeroImage : festival.Poster;
 
-            case Season season when season.IndexNumber is int seasonYear:
+            case Season season when !string.IsNullOrEmpty(season.Path):
+                var seasonYear = YearResolver.FromFolderName(Path.GetFileName(season.Path), season.IndexNumber);
                 return _store.FindYear(season.SeriesName, seasonYear)?.Poster;
 
-            case Episode episode when episode.ParentIndexNumber is int episodeYear && !string.IsNullOrEmpty(episode.Path):
+            case Episode episode when !string.IsNullOrEmpty(episode.Path):
+                var episodeYear = YearResolver.FromFolderName(Path.GetFileName(Path.GetDirectoryName(episode.Path)), episode.ParentIndexNumber);
                 var file = Path.GetFileNameWithoutExtension(episode.Path);
                 return _store.FindRecording(episode.SeriesName, episodeYear, file)?.ArtistImage;
 

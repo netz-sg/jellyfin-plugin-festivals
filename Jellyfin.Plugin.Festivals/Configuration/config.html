@@ -507,8 +507,8 @@
         .then(function () {
             Dashboard.hideLoadingMsg();
             var hint = page.querySelector('#festSaveHint');
-            hint.textContent = 'Saved. Run “Refresh metadata” on the library to apply.';
-            setTimeout(function(){ hint.textContent=''; }, 6000);
+            hint.textContent = 'Saved — refreshing metadata & images now. Reload the library in a moment.';
+            setTimeout(function(){ hint.textContent=''; }, 8000);
         }).catch(function () { Dashboard.hideLoadingMsg(); Dashboard.alert('Save failed.'); });
     }
 

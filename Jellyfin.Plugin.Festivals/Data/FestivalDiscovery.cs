@@ -66,7 +66,10 @@ public class FestivalDiscovery
                     continue;
                 }
 
-                var year = episode.ParentIndexNumber ?? 0;
+                var seasonFolder = string.IsNullOrEmpty(episode.Path)
+                    ? null
+                    : Path.GetFileName(Path.GetDirectoryName(episode.Path));
+                var year = YearResolver.FromFolderName(seasonFolder, episode.ParentIndexNumber);
                 var edition = festival.Years.FirstOrDefault(y => y.Year == year);
                 if (edition is null)
                 {
@@ -124,6 +127,30 @@ public class FestivalDiscovery
                 .ToList(),
             Libraries = GetLibraries().ToList()
         };
+    }
+
+    /// <summary>
+    /// Returns the ids of all series, seasons and episodes under the configured library,
+    /// so a metadata refresh can be queued for them after saving.
+    /// </summary>
+    /// <param name="settings">The plugin settings.</param>
+    /// <returns>The item ids.</returns>
+    public IReadOnlyList<Guid> ResolveItemIds(FestivalSettings settings)
+    {
+        var ids = new List<Guid>();
+        foreach (var series in ResolveSeries(settings))
+        {
+            ids.Add(series.Id);
+            foreach (var child in series.GetRecursiveChildren())
+            {
+                if (child is Season || child is Episode)
+                {
+                    ids.Add(child.Id);
+                }
+            }
+        }
+
+        return ids;
     }
 
     private List<Series> ResolveSeries(FestivalSettings settings)

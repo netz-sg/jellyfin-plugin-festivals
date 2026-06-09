@@ -1,7 +1,7 @@
 ---
 name: "Festivals"
 guid: "b9f7e2a4-3c1d-4e6f-8a2b-1d5c7e9f0a3b"
-version: "1.0.4.0"
+version: "1.0.5.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Browse music festivals as a native library: festival → years → recorded performances."
@@ -15,6 +15,7 @@ owner: "lifad"
 artifacts:
 - "Jellyfin.Plugin.Festivals.dll"
 changelog: >
+  1.0.5.0 - Folder-name years (2026 not 20), auto-refresh on save.
   1.0.4.0 - Image upload via canonical auth header, real error status.
   1.0.3.0 - Fix image upload, robust library-id discovery, diagnostics.
   1.0.2.0 - Folder-selection setup step, wider settings layout, library picker.

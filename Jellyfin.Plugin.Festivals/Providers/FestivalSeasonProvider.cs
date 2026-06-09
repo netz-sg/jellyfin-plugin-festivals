@@ -27,20 +27,19 @@ public class FestivalSeasonProvider : ICustomMetadataProvider<Season>
     /// <inheritdoc />
     public Task<ItemUpdateType> FetchAsync(Season item, MetadataRefreshOptions options, CancellationToken cancellationToken)
     {
-        var year = item.IndexNumber;
-        if (year is null)
+        var folder = string.IsNullOrEmpty(item.Path) ? null : Path.GetFileName(item.Path);
+        var year = YearResolver.FromFolderName(folder, item.IndexNumber);
+        if (year <= 0)
         {
             return Task.FromResult(ItemUpdateType.None);
         }
 
-        var edition = _store.FindYear(item.SeriesName, year.Value);
-        if (edition is null)
-        {
-            return Task.FromResult(ItemUpdateType.None);
-        }
+        // Always show the real year as the season title, even when Jellyfin parsed
+        // the folder "2026" into a season number like 20.
+        item.Name = year.ToString(CultureInfo.InvariantCulture);
 
-        item.Name = year.Value.ToString(CultureInfo.InvariantCulture);
-        if (!string.IsNullOrWhiteSpace(edition.Description))
+        var edition = _store.FindYear(item.SeriesName, year);
+        if (edition is not null && !string.IsNullOrWhiteSpace(edition.Description))
         {
             item.Overview = edition.Description;
         }

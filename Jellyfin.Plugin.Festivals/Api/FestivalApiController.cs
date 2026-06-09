@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Festivals.Data;
 using Jellyfin.Plugin.Festivals.Model;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,16 +22,26 @@ public class FestivalApiController : ControllerBase
 {
     private readonly FestivalStore _store;
     private readonly FestivalDiscovery _discovery;
+    private readonly IProviderManager _providerManager;
+    private readonly IFileSystem _fileSystem;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FestivalApiController"/> class.
     /// </summary>
     /// <param name="store">The festival store.</param>
     /// <param name="discovery">The festival discovery service.</param>
-    public FestivalApiController(FestivalStore store, FestivalDiscovery discovery)
+    /// <param name="providerManager">The provider manager (to queue refreshes).</param>
+    /// <param name="fileSystem">The file system.</param>
+    public FestivalApiController(
+        FestivalStore store,
+        FestivalDiscovery discovery,
+        IProviderManager providerManager,
+        IFileSystem fileSystem)
     {
         _store = store;
         _discovery = discovery;
+        _providerManager = providerManager;
+        _fileSystem = fileSystem;
     }
 
     /// <summary>
@@ -146,7 +158,28 @@ public class FestivalApiController : ControllerBase
     public ActionResult UpdateDatabase([FromBody] FestivalDatabase database)
     {
         _store.Replace(database);
+        QueueRefresh();
         return NoContent();
+    }
+
+    /// <summary>
+    /// Queues a metadata + image refresh for all festival items so saved data is applied
+    /// without the user having to trigger a library refresh manually.
+    /// </summary>
+    private void QueueRefresh()
+    {
+        var ids = _discovery.ResolveItemIds(_store.GetSettings());
+        var directoryService = new DirectoryService(_fileSystem);
+        foreach (var id in ids)
+        {
+            var options = new MetadataRefreshOptions(directoryService)
+            {
+                MetadataRefreshMode = MetadataRefreshMode.FullRefresh,
+                ImageRefreshMode = MetadataRefreshMode.FullRefresh,
+                ReplaceAllImages = true
+            };
+            _providerManager.QueueRefresh(id, options, RefreshPriority.High);
+        }
     }
 
     /// <summary>

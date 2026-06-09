@@ -29,14 +29,15 @@ public class FestivalEpisodeProvider : ICustomMetadataProvider<Episode>
     /// <inheritdoc />
     public Task<ItemUpdateType> FetchAsync(Episode item, MetadataRefreshOptions options, CancellationToken cancellationToken)
     {
-        var year = item.ParentIndexNumber;
-        if (year is null || string.IsNullOrEmpty(item.Path))
+        if (string.IsNullOrEmpty(item.Path))
         {
             return Task.FromResult(ItemUpdateType.None);
         }
 
+        var seasonFolder = Path.GetFileName(Path.GetDirectoryName(item.Path));
+        var year = YearResolver.FromFolderName(seasonFolder, item.ParentIndexNumber);
         var fileName = Path.GetFileNameWithoutExtension(item.Path);
-        var recording = _store.FindRecording(item.SeriesName, year.Value, fileName);
+        var recording = _store.FindRecording(item.SeriesName, year, fileName);
         if (recording is null)
         {
             return Task.FromResult(ItemUpdateType.None);
